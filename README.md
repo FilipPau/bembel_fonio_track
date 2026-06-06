@@ -1,9 +1,9 @@
 # Project Name
 
-One-line description of what your team built for the **Track Name** track.
+One-line description of what your team built for the **Fonio* track.
 
 A submission for **START Hack Vienna '26**, built for the case provided by
-**Case Partner**.
+**Fonio**.
 
 ---
 
@@ -91,7 +91,7 @@ A few sentences on how the pieces fit together and any assumptions you made.
 
 ## Submission
 
-- Track: **Track Name** · Case partner: **Case Partner**
+- Track: **Fonio** · Case partner: **Fonio**
 - Submitted to the START Hack Vienna '26 GitHub organisation.
 
 ## License
