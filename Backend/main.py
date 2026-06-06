@@ -115,7 +115,13 @@ def shane_customers_by_number():
     from_number = payload.get("fromNumber")
     if not from_number:
         return jsonify({"error": "Missing field", "field": "fromNumber"}), 400
-    return jsonify(list(db.find_customers_by_phone_number(from_number))), 200
+
+    customers = list(db.find_customers_by_phone_number(from_number))
+
+    if len(customers) == 1:
+        return jsonify(customers[0]), 200
+    else:
+        return jsonify({}), 404
 
 
 @app.post("/api/treatments")
