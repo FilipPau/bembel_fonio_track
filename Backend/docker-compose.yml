@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: bembel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-folio}
+      POSTGRES_USER: ${POSTGRES_USER:-folio_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./sql/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-folio_user} -d ${POSTGRES_DB:-folio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
