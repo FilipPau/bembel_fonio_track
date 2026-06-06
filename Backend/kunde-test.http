@@ -1,0 +1,24 @@
+@baseUrl = http://localhost:5000
+@customerId = TEST-SSN-001
+
+### kunden-post: create customer
+POST {{baseUrl}}/kunden
+Content-Type: application/json
+
+{
+  "social_security_number": "{{customerId}}",
+  "first_name": "Markus ",
+  "last_name": "Krakus",
+  "birth_date": "08.04.2005",
+  "phone_number": "+43123456789",
+  "has_previous_appointments": false
+}
+
+### kunden-get: get customer by id
+GET {{baseUrl}}/kunden/get/{{customerId}}
+
+### kunden-getall: list all customers
+GET {{baseUrl}}/kunden/getall
+
+### kunden-delete: delete customer by id
+DELETE {{baseUrl}}/kunden/delete/{{customerId}}
