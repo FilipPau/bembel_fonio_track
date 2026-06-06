@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timedelta, timezone
 from contextlib import contextmanager
 from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, Sequence
 
@@ -534,3 +535,86 @@ def delete_planned_appointment(planned_appointment_id: int) -> int:
         "DELETE FROM planned_appointments WHERE id = %s",
         (planned_appointment_id,),
     )
+
+
+def reserve_appointment_for_treatment(
+    treatment_id: int,
+    customer_id: str,
+    search_from: Optional[datetime] = None,
+) -> Mapping[str, Any]:
+    treatment = get_treatment(treatment_id)
+    if not treatment:
+        return {"success": False, "appointment": None}
+
+    customer = get_customer(customer_id)
+    if not customer:
+        return {"success": False, "appointment": None}
+
+    duration = timedelta(minutes=int(treatment["min_duration_minutes"]))
+
+    if search_from is None:
+        search_from = datetime.now(timezone.utc)
+
+    qualified_staff = db_fetch_all(
+        """
+        SELECT ss.staff_id
+        FROM staff_specializations ss
+        WHERE ss.treatment_id = %s
+        ORDER BY ss.staff_id
+        """,
+        (treatment_id,),
+    )
+
+    for staff_row in qualified_staff:
+        staff_id = staff_row["staff_id"]
+
+        shifts = db_fetch_all(
+            """
+            SELECT id, staff_id, room_id, shift_start, shift_end
+            FROM staff_shifts
+            WHERE staff_id = %s
+              AND shift_end > %s
+            ORDER BY shift_start
+            """,
+            (staff_id, search_from),
+        )
+
+        for shift in shifts:
+            candidate_start = max(shift["shift_start"], search_from)
+            candidate_end = candidate_start + duration
+
+            if candidate_end > shift["shift_end"]:
+                continue
+
+            conflict = db_fetch_one(
+                """
+                SELECT id
+                FROM appointments
+                WHERE staff_id = %s
+                  AND status = 'scheduled'
+                  AND start_time < %s
+                  AND end_time > %s
+                LIMIT 1
+                """,
+                (staff_id, candidate_end, candidate_start),
+            )
+
+            if conflict:
+                continue
+
+            appointment = create_appointment(
+                {
+                    "customer_id": customer_id,
+                    "staff_id": staff_id,
+                    "room_id": shift["room_id"],
+                    "treatment_id": treatment_id,
+                    "start_time": candidate_start,
+                    "end_time": candidate_end,
+                    "status": "scheduled",
+                }
+            )
+
+            if appointment:
+                return {"success": True, "appointment": appointment}
+
+    return {"success": False, "appointment": None}
