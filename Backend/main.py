@@ -1,300 +1,280 @@
-"""Flask app + PostgreSQL adapter for customer operations."""
+"""Flask app for explicit database CRUD operations."""
 
 from __future__ import annotations
 
 import os
-from contextlib import contextmanager
-from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, Sequence
+from typing import Any, Callable, Mapping
 
 from flask import Flask, jsonify, request
 
-
-def _load_psycopg():
-    """
-    Lazily load a PostgreSQL driver.
-    Supports psycopg (v3) and psycopg2 fallback.
-    """
-    try:
-        import psycopg  # type: ignore
-
-        return psycopg.connect, True
-    except Exception:
-        try:
-            import psycopg2  # type: ignore
-
-            return psycopg2.connect, False
-        except Exception as exc:  # pragma: no cover - driver availability depends on env
-            raise RuntimeError(
-                "No PostgreSQL driver found. Install psycopg or psycopg2-binary."
-            ) from exc
-
-
-@dataclass(frozen=True)
-class DatabaseConfig:
-    host: str = os.getenv("POSTGRES_HOST", "localhost")
-    port: int = int(os.getenv("POSTGRES_PORT", "5432"))
-    database: str = os.getenv("POSTGRES_DB", "folio")
-    user: str = os.getenv("POSTGRES_USER", "folio_user")
-    password: str = os.getenv("POSTGRES_PASSWORD", "changeme")
-
-
-class DatabaseAdapter:
-    """
-    Simple PostgreSQL adapter with context-managed connections and query helpers.
-    """
-
-    def __init__(self, config: Optional[DatabaseConfig] = None) -> None:
-        self._config = config or DatabaseConfig()
-        self._connect, self._is_psycopg3 = _load_psycopg()
-
-    @property
-    def dsn(self) -> Dict[str, Any]:
-        return {
-            "host": self._config.host,
-            "port": self._config.port,
-            "dbname": self._config.database,
-            "user": self._config.user,
-            "password": self._config.password,
-        }
-
-    @contextmanager
-    def connection(self) -> Iterator[Any]:
-        conn = self._connect(**self.dsn)
-        try:
-            yield conn
-            if hasattr(conn, "commit"):
-                conn.commit()
-        except Exception:
-            if hasattr(conn, "rollback"):
-                conn.rollback()
-            raise
-        finally:
-            conn.close()
-
-    def _cursor(self, conn: Any):  # pragma: no cover
-        if self._is_psycopg3:
-            try:
-                from psycopg.rows import dict_row
-
-                return conn.cursor(row_factory=dict_row)
-            except Exception:
-                return conn.cursor()
-        try:
-            import psycopg2.extras
-
-            return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        except Exception:
-            return conn.cursor()
-
-    @contextmanager
-    def cursor(self) -> Iterator[Any]:
-        with self.connection() as conn:
-            cur = self._cursor(conn)
-            try:
-                yield cur
-            finally:
-                cur.close()
-
-    def execute(
-        self,
-        query: str,
-        params: Optional[Sequence[Any] | Mapping[str, Any]] = None,
-    ) -> int:
-        with self.cursor() as cur:
-            if params is None:
-                cur.execute(query)
-            else:
-                cur.execute(query, params)
-            return int(cur.rowcount or 0)
-
-    def fetch_all(
-        self,
-        query: str,
-        params: Optional[Sequence[Any] | Mapping[str, Any]] = None,
-    ) -> Iterable[Mapping[str, Any]]:
-        with self.cursor() as cur:
-            if params is None:
-                cur.execute(query)
-            else:
-                cur.execute(query, params)
-            rows = cur.fetchall()
-            description = cur.description
-
-        if not rows:
-            return []
-
-        if isinstance(rows[0], Mapping):
-            return rows  # type: ignore[return-value]
-
-        cols = [d[0] for d in (description or [])]
-        return [dict(zip(cols, row)) for row in rows]
-
-    def fetch_one(
-        self,
-        query: str,
-        params: Optional[Sequence[Any] | Mapping[str, Any]] = None,
-    ) -> Optional[Mapping[str, Any]]:
-        with self.cursor() as cur:
-            if params is None:
-                cur.execute(query)
-            else:
-                cur.execute(query, params)
-            row = cur.fetchone()
-            description = cur.description
-
-        if row is None:
-            return None
-
-        if isinstance(row, Mapping):
-            return row
-
-        cols = [d[0] for d in (description or [])]
-        return dict(zip(cols, row))
-
-    def healthcheck(self) -> bool:
-        return self.fetch_one("SELECT 1 AS ok") is not None
-
-
-def _is_duplicate_error(exc: BaseException) -> bool:
-    return getattr(exc, "sqlstate", None) == "23505" or getattr(exc, "pgcode", None) == "23505"
+import db
+from db import db_healthcheck
 
 
 app = Flask(__name__)
-db = DatabaseAdapter()
+
+
+def _sqlstate(exc: BaseException) -> str | None:
+    return getattr(exc, "sqlstate", None) or getattr(exc, "pgcode", None)
+
+
+def _database_error_response(exc: BaseException):
+    state = _sqlstate(exc)
+    if state == "23505":
+        return jsonify({"error": "Resource already exists", "details": str(exc)}), 409
+    if state == "23503":
+        return jsonify({"error": "Referenced resource does not exist", "details": str(exc)}), 400
+    if state == "23514":
+        return jsonify({"error": "Invalid data", "details": str(exc)}), 400
+    if state == "23P01":
+        return jsonify({"error": "Resource conflicts with existing schedule", "details": str(exc)}), 409
+    return jsonify({"error": "Database operation failed", "details": str(exc)}), 500
+
+
+def _json_payload() -> Mapping[str, Any]:
+    return request.get_json(silent=True) or {}
+
+
+def _create(handler: Callable[[Mapping[str, Any]], Mapping[str, Any] | None]):
+    try:
+        row = handler(_json_payload())
+    except KeyError as exc:
+        return jsonify({"error": "Missing field", "field": str(exc).strip("'")}), 400
+    except Exception as exc:  # pragma: no cover - driver-specific behavior
+        return _database_error_response(exc)
+    return jsonify(row), 201
+
+
+def _update(handler: Callable[[Mapping[str, Any]], Mapping[str, Any] | None]):
+    try:
+        row = handler(_json_payload())
+    except Exception as exc:  # pragma: no cover - driver-specific behavior
+        return _database_error_response(exc)
+    if not row:
+        return jsonify({"error": "Resource not found"}), 404
+    return jsonify(row), 200
+
+
+def _delete(handler: Callable[[], int]):
+    try:
+        deleted = handler()
+    except Exception as exc:  # pragma: no cover - driver-specific behavior
+        return _database_error_response(exc)
+    if deleted == 0:
+        return jsonify({"error": "Resource not found"}), 404
+    return "", 204
+
+
+def _get(row: Mapping[str, Any] | None):
+    if not row:
+        return jsonify({"error": "Resource not found"}), 404
+    return jsonify(row), 200
 
 
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     return response
 
 
-def _bool_or_400(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        lower = value.strip().lower()
-        if lower in {"true", "1", "yes", "y"}:
-            return True
-        if lower in {"false", "0", "no", "n"}:
-            return False
-    raise ValueError("has_previous_appointments must be a boolean.")
-
-
-@app.get("/health")
+@app.get("/api/health")
 def health() -> tuple[Any, int]:
-    return jsonify({"ok": db.healthcheck()}), 200
+    return jsonify({"ok": db_healthcheck()}), 200
 
-
-@app.post("/kunden")
+@app.post("/api/customers")
 def create_customer():
-    payload = request.get_json(silent=True) or {}
-    required = [
-        "social_security_number",
-        "first_name",
-        "last_name",
-        "birth_date",
-        "phone_number",
-        "has_previous_appointments",
-    ]
-    missing = [field for field in required if field not in payload]
-    if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
-
-    try:
-        has_previous_appointments = _bool_or_400(payload["has_previous_appointments"])
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-
-    query = (
-        """
-        INSERT INTO customers
-            (social_security_number, first_name, last_name, birth_date, phone_number, has_previous_appointments)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """
-    )
-    try:
-        db.execute(
-            query,
-            (
-                payload["social_security_number"],
-                payload["first_name"],
-                payload["last_name"],
-                payload["birth_date"],
-                payload["phone_number"],
-                has_previous_appointments,
-            ),
-        )
-    except Exception as exc:  # pragma: no cover - depends on driver-specific errors
-        if _is_duplicate_error(exc):
-            return jsonify({"error": "Customer already exists"}), 409
-        return jsonify({"error": "Failed to create customer", "details": str(exc)}), 500
-
-    return jsonify(
-        {
-            "social_security_number": payload["social_security_number"],
-            "first_name": payload["first_name"],
-            "last_name": payload["last_name"],
-            "birth_date": payload["birth_date"],
-            "phone_number": payload["phone_number"],
-            "has_previous_appointments": has_previous_appointments,
-        }
-    ), 201
+    return _create(db.create_customer)
 
 
-@app.get("/kunden/getall")
-def get_all_customers_getall():
-    customers = list(db.fetch_all("SELECT * FROM customers ORDER BY social_security_number"))
-    return jsonify(customers), 200
-
-
-@app.get("/kunden")
+@app.get("/api/customers")
 def get_all_customers():
-    customers = list(db.fetch_all("SELECT * FROM customers ORDER BY social_security_number"))
-    return jsonify(customers), 200
+    return jsonify(list(db.get_all_customers())), 200
 
 
-@app.get("/kunden/<social_security_number>")
+@app.get("/api/customers/<social_security_number>")
 def get_customer(social_security_number: str):
-    customer = db.fetch_one(
-        "SELECT * FROM customers WHERE social_security_number = %s", (social_security_number,)
-    )
-    if not customer:
-        return jsonify({"error": "Customer not found"}), 404
-    return jsonify(customer), 200
+    return _get(db.get_customer(social_security_number))
 
 
-@app.get("/kunden/get/<social_security_number>")
-def get_customer_explicit(social_security_number: str):
-    customer = db.fetch_one(
-        "SELECT * FROM customers WHERE social_security_number = %s", (social_security_number,)
-    )
-    if not customer:
-        return jsonify({"error": "Customer not found"}), 404
-    return jsonify(customer), 200
+@app.patch("/api/customers/<social_security_number>")
+@app.put("/api/customers/<social_security_number>")
+def update_customer(social_security_number: str):
+    return _update(lambda data: db.update_customer(social_security_number, data))
 
 
-@app.delete("/kunden/<social_security_number>")
+@app.delete("/api/customers/<social_security_number>")
 def delete_customer(social_security_number: str):
-    deleted = db.execute(
-        "DELETE FROM customers WHERE social_security_number = %s", (social_security_number,)
-    )
-    if deleted == 0:
-        return jsonify({"error": "Customer not found"}), 404
-    return "", 204
+    return _delete(lambda: db.delete_customer(social_security_number))
 
 
-@app.delete("/kunden/delete/<social_security_number>")
-def delete_customer_explicit(social_security_number: str):
-    deleted = db.execute(
-        "DELETE FROM customers WHERE social_security_number = %s", (social_security_number,)
-    )
-    if deleted == 0:
-        return jsonify({"error": "Customer not found"}), 404
-    return "", 204
+@app.post("/api/treatments")
+def create_treatment():
+    return _create(db.create_treatment)
+
+
+@app.get("/api/treatments")
+def get_all_treatments():
+    return jsonify(list(db.get_all_treatments())), 200
+
+
+@app.get("/api/treatments/<int:treatment_id>")
+def get_treatment(treatment_id: int):
+    return _get(db.get_treatment(treatment_id))
+
+
+@app.patch("/api/treatments/<int:treatment_id>")
+@app.put("/api/treatments/<int:treatment_id>")
+def update_treatment(treatment_id: int):
+    return _update(lambda data: db.update_treatment(treatment_id, data))
+
+
+@app.delete("/api/treatments/<int:treatment_id>")
+def delete_treatment(treatment_id: int):
+    return _delete(lambda: db.delete_treatment(treatment_id))
+
+
+@app.post("/api/staff")
+def create_staff():
+    return _create(db.create_staff)
+
+
+@app.get("/api/staff")
+def get_all_staff():
+    return jsonify(list(db.get_all_staff())), 200
+
+
+@app.get("/api/staff/<int:staff_id>")
+def get_staff(staff_id: int):
+    return _get(db.get_staff(staff_id))
+
+
+@app.patch("/api/staff/<int:staff_id>")
+@app.put("/api/staff/<int:staff_id>")
+def update_staff(staff_id: int):
+    return _update(lambda data: db.update_staff(staff_id, data))
+
+
+@app.delete("/api/staff/<int:staff_id>")
+def delete_staff(staff_id: int):
+    return _delete(lambda: db.delete_staff(staff_id))
+
+
+@app.post("/api/rooms")
+def create_room():
+    return _create(db.create_room)
+
+
+@app.get("/api/rooms")
+def get_all_rooms():
+    return jsonify(list(db.get_all_rooms())), 200
+
+
+@app.get("/api/rooms/<int:room_id>")
+def get_room(room_id: int):
+    return _get(db.get_room(room_id))
+
+
+@app.patch("/api/rooms/<int:room_id>")
+@app.put("/api/rooms/<int:room_id>")
+def update_room(room_id: int):
+    return _update(lambda data: db.update_room(room_id, data))
+
+
+@app.delete("/api/rooms/<int:room_id>")
+def delete_room(room_id: int):
+    return _delete(lambda: db.delete_room(room_id))
+
+
+@app.post("/api/staff-specializations")
+@app.post("/api/staff_specializations")
+def create_staff_specialization():
+    return _create(db.create_staff_specialization)
+
+
+@app.get("/api/staff-specializations")
+@app.get("/api/staff_specializations")
+def get_all_staff_specializations():
+    return jsonify(list(db.get_all_staff_specializations())), 200
+
+
+@app.get("/api/staff-specializations/<int:staff_id>/<int:treatment_id>")
+@app.get("/api/staff_specializations/<int:staff_id>/<int:treatment_id>")
+def get_staff_specialization(staff_id: int, treatment_id: int):
+    return _get(db.get_staff_specialization(staff_id, treatment_id))
+
+
+@app.patch("/api/staff-specializations/<int:staff_id>/<int:treatment_id>")
+@app.put("/api/staff-specializations/<int:staff_id>/<int:treatment_id>")
+@app.patch("/api/staff_specializations/<int:staff_id>/<int:treatment_id>")
+@app.put("/api/staff_specializations/<int:staff_id>/<int:treatment_id>")
+def update_staff_specialization(staff_id: int, treatment_id: int):
+    return _update(lambda data: db.update_staff_specialization(staff_id, treatment_id, data))
+
+
+@app.delete("/api/staff-specializations/<int:staff_id>/<int:treatment_id>")
+@app.delete("/api/staff_specializations/<int:staff_id>/<int:treatment_id>")
+def delete_staff_specialization(staff_id: int, treatment_id: int):
+    return _delete(lambda: db.delete_staff_specialization(staff_id, treatment_id))
+
+
+@app.post("/api/staff-shifts")
+@app.post("/api/staff_shifts")
+def create_staff_shift():
+    return _create(db.create_staff_shift)
+
+
+@app.get("/api/staff-shifts")
+@app.get("/api/staff_shifts")
+def get_all_staff_shifts():
+    return jsonify(list(db.get_all_staff_shifts())), 200
+
+
+@app.get("/api/staff-shifts/<int:shift_id>")
+@app.get("/api/staff_shifts/<int:shift_id>")
+def get_staff_shift(shift_id: int):
+    return _get(db.get_staff_shift(shift_id))
+
+
+@app.patch("/api/staff-shifts/<int:shift_id>")
+@app.put("/api/staff-shifts/<int:shift_id>")
+@app.patch("/api/staff_shifts/<int:shift_id>")
+@app.put("/api/staff_shifts/<int:shift_id>")
+def update_staff_shift(shift_id: int):
+    return _update(lambda data: db.update_staff_shift(shift_id, data))
+
+
+@app.delete("/api/staff-shifts/<int:shift_id>")
+@app.delete("/api/staff_shifts/<int:shift_id>")
+def delete_staff_shift(shift_id: int):
+    return _delete(lambda: db.delete_staff_shift(shift_id))
+
+
+@app.post("/api/appointments")
+def create_appointment():
+    return _create(db.create_appointment)
+
+
+@app.get("/api/appointments")
+def get_all_appointments():
+    return jsonify(list(db.get_all_appointments())), 200
+
+
+@app.get("/api/appointments/<int:appointment_id>")
+def get_appointment(appointment_id: int):
+    return _get(db.get_appointment(appointment_id))
+
+
+@app.patch("/api/appointments/<int:appointment_id>")
+@app.put("/api/appointments/<int:appointment_id>")
+def update_appointment(appointment_id: int):
+    return _update(lambda data: db.update_appointment(appointment_id, data))
+
+
+@app.delete("/api/appointments/<int:appointment_id>")
+def delete_appointment(appointment_id: int):
+    return _delete(lambda: db.delete_appointment(appointment_id))
 
 
 if __name__ == "__main__":
