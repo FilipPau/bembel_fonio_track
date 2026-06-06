@@ -3,7 +3,7 @@
 
 INSERT INTO customers (social_security_number, first_name, last_name, birth_date, phone_number)
 VALUES
-    ('1001010101', 'Samara', 'Matejka', '2003-01-01', '+436642144008'),
+    ('1001010101', 'Bembel', 'Boiii', '2003-01-01', '+436642144008'),
     ('1002020202', 'Omar', 'Haddad', '1984-02-20', '+43660200200'),
     ('1003030303', 'Mia', 'Schneider', '1978-03-30', '+43660300300'),
     ('1004040404', 'Noah', 'Berger', '1995-04-04', '+43660400400'),
