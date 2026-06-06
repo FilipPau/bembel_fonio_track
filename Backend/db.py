@@ -171,6 +171,18 @@ def delete_customer(social_security_number: str) -> int:
     )
 
 
+def find_customers_by_phone_number(phone_number: str) -> Iterable[Mapping[str, Any]]:
+    return db_fetch_all(
+        """
+        SELECT *
+        FROM customers
+        WHERE phone_number = %s
+        ORDER BY social_security_number
+        """,
+        (phone_number,),
+    )
+
+
 def create_treatment(data: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
     return db_fetch_one(
         """
@@ -365,6 +377,50 @@ def delete_staff_shift(shift_id: int) -> int:
     return db_execute("DELETE FROM staff_shifts WHERE id = %s", (shift_id,))
 
 
+def create_weekly_capacity_limit(data: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
+    return db_fetch_one(
+        """
+        INSERT INTO weekly_capacity_limits (weekday, max_minutes)
+        VALUES (%s, %s)
+        RETURNING *
+        """,
+        (data["weekday"], data["max_minutes"]),
+    )
+
+
+def get_all_weekly_capacity_limits() -> Iterable[Mapping[str, Any]]:
+    return db_fetch_all("SELECT * FROM weekly_capacity_limits ORDER BY weekday")
+
+
+def get_weekly_capacity_limit(weekday: int) -> Optional[Mapping[str, Any]]:
+    return db_fetch_one(
+        "SELECT * FROM weekly_capacity_limits WHERE weekday = %s",
+        (weekday,),
+    )
+
+
+def update_weekly_capacity_limit(
+    weekday: int,
+    data: Mapping[str, Any],
+) -> Optional[Mapping[str, Any]]:
+    return db_fetch_one(
+        """
+        UPDATE weekly_capacity_limits
+        SET max_minutes = COALESCE(%s, max_minutes)
+        WHERE weekday = %s
+        RETURNING *
+        """,
+        (data.get("max_minutes"), weekday),
+    )
+
+
+def delete_weekly_capacity_limit(weekday: int) -> int:
+    return db_execute(
+        "DELETE FROM weekly_capacity_limits WHERE weekday = %s",
+        (weekday,),
+    )
+
+
 def create_appointment(data: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
     return db_fetch_one(
         """
@@ -422,3 +478,59 @@ def update_appointment(appointment_id: int, data: Mapping[str, Any]) -> Optional
 
 def delete_appointment(appointment_id: int) -> int:
     return db_execute("DELETE FROM appointments WHERE id = %s", (appointment_id,))
+
+
+def create_planned_appointment(data: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
+    return db_fetch_one(
+        """
+        INSERT INTO planned_appointments
+            (customer_id, treatment_id, appointment_date)
+        VALUES (%s, %s, %s)
+        RETURNING *
+        """,
+        (
+            data["customer_id"],
+            data["treatment_id"],
+            data["appointment_date"],
+        ),
+    )
+
+
+def get_all_planned_appointments() -> Iterable[Mapping[str, Any]]:
+    return db_fetch_all("SELECT * FROM planned_appointments ORDER BY appointment_date, id")
+
+
+def get_planned_appointment(planned_appointment_id: int) -> Optional[Mapping[str, Any]]:
+    return db_fetch_one(
+        "SELECT * FROM planned_appointments WHERE id = %s",
+        (planned_appointment_id,),
+    )
+
+
+def update_planned_appointment(
+    planned_appointment_id: int,
+    data: Mapping[str, Any],
+) -> Optional[Mapping[str, Any]]:
+    return db_fetch_one(
+        """
+        UPDATE planned_appointments
+        SET customer_id = COALESCE(%s, customer_id),
+            treatment_id = COALESCE(%s, treatment_id),
+            appointment_date = COALESCE(%s, appointment_date)
+        WHERE id = %s
+        RETURNING *
+        """,
+        (
+            data.get("customer_id"),
+            data.get("treatment_id"),
+            data.get("appointment_date"),
+            planned_appointment_id,
+        ),
+    )
+
+
+def delete_planned_appointment(planned_appointment_id: int) -> int:
+    return db_execute(
+        "DELETE FROM planned_appointments WHERE id = %s",
+        (planned_appointment_id,),
+    )

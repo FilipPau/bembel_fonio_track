@@ -3,12 +3,12 @@
 
 INSERT INTO customers (social_security_number, first_name, last_name, birth_date, phone_number)
 VALUES
-    ('1001010101', 'Lena', 'Fischer', '1990-01-10', '+43 660 100100'),
-    ('1002020202', 'Omar', 'Haddad', '1984-02-20', '+43 660 200200'),
-    ('1003030303', 'Mia', 'Schneider', '1978-03-30', '+43 660 300300'),
-    ('1004040404', 'Noah', 'Berger', '1995-04-04', '+43 660 400400'),
-    ('1005050505', 'Emma', 'Wagner', '2001-05-15', '+43 660 500500'),
-    ('1006060606', 'Jonas', 'Mayer', '1969-06-06', '+43 660 600600')
+    ('1001010101', 'Samara', 'Matejka', '2003-01-01', '+4312345678'),
+    ('1002020202', 'Omar', 'Haddad', '1984-02-20', '+43660200200'),
+    ('1003030303', 'Mia', 'Schneider', '1978-03-30', '+43660300300'),
+    ('1004040404', 'Noah', 'Berger', '1995-04-04', '+43660400400'),
+    ('1005050505', 'Emma', 'Wagner', '2001-05-15', '+43660500500'),
+    ('1006060606', 'Jonas', 'Mayer', '1969-06-06', '+43660600600')
 ON CONFLICT (social_security_number) DO NOTHING;
 
 INSERT INTO treatments (id, name, min_duration_minutes)
@@ -47,6 +47,18 @@ VALUES
     (3, 5)
 ON CONFLICT (staff_id, treatment_id) DO NOTHING;
 
+INSERT INTO weekly_capacity_limits (weekday, max_minutes)
+VALUES
+    (1, 180),
+    (2, 180),
+    (3, 180),
+    (4, 180),
+    (5, 180),
+    (6, 0),
+    (7, 0)
+ON CONFLICT (weekday) DO UPDATE
+SET max_minutes = EXCLUDED.max_minutes;
+
 INSERT INTO staff_shifts (staff_id, room_id, shift_start, shift_end)
 VALUES
     (1, 1, '2026-06-08 08:00:00+02', '2026-06-08 14:00:00+02'),
@@ -74,6 +86,19 @@ VALUES
     ('1006060606', 3, 3, 5, '2026-06-08 10:00:00+02', '2026-06-08 11:30:00+02', 'scheduled'),
     ('1002020202', 1, 1, 1, '2026-06-09 08:00:00+02', '2026-06-09 08:30:00+02', 'scheduled'),
     ('1004040404', 2, 2, 3, '2026-06-09 09:00:00+02', '2026-06-09 09:45:00+02', 'scheduled')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO planned_appointments (
+    customer_id,
+    treatment_id,
+    appointment_date
+)
+VALUES
+    ('1001010101', 2, '2027-06-08'),
+    ('1003030303', 3, '2027-06-09'),
+    ('1005050505', 4, '2027-06-10'),
+    ('1006060606', 5, '2027-06-11'),
+    ('1002020202', 1, '2027-06-12')
 ON CONFLICT DO NOTHING;
 
 SELECT setval('treatments_id_seq', (SELECT MAX(id) FROM treatments));

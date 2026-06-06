@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS staff_shifts (
     )
 );
 
+CREATE TABLE IF NOT EXISTS weekly_capacity_limits (
+    weekday     SMALLINT PRIMARY KEY CHECK (weekday BETWEEN 1 AND 7),
+    max_minutes INTEGER NOT NULL CHECK (max_minutes >= 0)
+);
+
 CREATE TABLE IF NOT EXISTS appointments (
     id           BIGSERIAL PRIMARY KEY,
     customer_id  VARCHAR(20) NOT NULL REFERENCES customers (social_security_number) ON DELETE CASCADE,
@@ -91,3 +96,19 @@ CREATE INDEX IF NOT EXISTS idx_staff_shifts_staff_shift_start
 
 CREATE INDEX IF NOT EXISTS idx_staff_shifts_room_shift_start
     ON staff_shifts (room_id, shift_start);
+
+CREATE TABLE IF NOT EXISTS planned_appointments (
+    id               BIGSERIAL PRIMARY KEY,
+    customer_id      VARCHAR(20) NOT NULL REFERENCES customers (social_security_number) ON DELETE CASCADE,
+    treatment_id     INTEGER NOT NULL REFERENCES treatments (id) ON DELETE RESTRICT,
+    appointment_date DATE NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_planned_appointments_customer_id
+    ON planned_appointments (customer_id);
+
+CREATE INDEX IF NOT EXISTS idx_planned_appointments_treatment_id
+    ON planned_appointments (treatment_id);
+
+CREATE INDEX IF NOT EXISTS idx_planned_appointments_appointment_date
+    ON planned_appointments (appointment_date);

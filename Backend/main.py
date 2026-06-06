@@ -109,6 +109,15 @@ def delete_customer(social_security_number: str):
     return _delete(lambda: db.delete_customer(social_security_number))
 
 
+@app.post("/api/shane/customers-by-number")
+def shane_customers_by_number():
+    payload = _json_payload()
+    from_number = payload.get("fromNumber")
+    if not from_number:
+        return jsonify({"error": "Missing field", "field": "fromNumber"}), 400
+    return jsonify(list(db.find_customers_by_phone_number(from_number))), 200
+
+
 @app.post("/api/treatments")
 def create_treatment():
     return _create(db.create_treatment)
@@ -251,6 +260,38 @@ def delete_staff_shift(shift_id: int):
     return _delete(lambda: db.delete_staff_shift(shift_id))
 
 
+@app.post("/api/weekly-capacity-limits")
+@app.post("/api/weekly_capacity_limits")
+def create_weekly_capacity_limit():
+    return _create(db.create_weekly_capacity_limit)
+
+
+@app.get("/api/weekly-capacity-limits")
+@app.get("/api/weekly_capacity_limits")
+def get_all_weekly_capacity_limits():
+    return jsonify(list(db.get_all_weekly_capacity_limits())), 200
+
+
+@app.get("/api/weekly-capacity-limits/<int:weekday>")
+@app.get("/api/weekly_capacity_limits/<int:weekday>")
+def get_weekly_capacity_limit(weekday: int):
+    return _get(db.get_weekly_capacity_limit(weekday))
+
+
+@app.patch("/api/weekly-capacity-limits/<int:weekday>")
+@app.put("/api/weekly-capacity-limits/<int:weekday>")
+@app.patch("/api/weekly_capacity_limits/<int:weekday>")
+@app.put("/api/weekly_capacity_limits/<int:weekday>")
+def update_weekly_capacity_limit(weekday: int):
+    return _update(lambda data: db.update_weekly_capacity_limit(weekday, data))
+
+
+@app.delete("/api/weekly-capacity-limits/<int:weekday>")
+@app.delete("/api/weekly_capacity_limits/<int:weekday>")
+def delete_weekly_capacity_limit(weekday: int):
+    return _delete(lambda: db.delete_weekly_capacity_limit(weekday))
+
+
 @app.post("/api/appointments")
 def create_appointment():
     return _create(db.create_appointment)
@@ -275,6 +316,38 @@ def update_appointment(appointment_id: int):
 @app.delete("/api/appointments/<int:appointment_id>")
 def delete_appointment(appointment_id: int):
     return _delete(lambda: db.delete_appointment(appointment_id))
+
+
+@app.post("/api/planned-appointments")
+@app.post("/api/planned_appointments")
+def create_planned_appointment():
+    return _create(db.create_planned_appointment)
+
+
+@app.get("/api/planned-appointments")
+@app.get("/api/planned_appointments")
+def get_all_planned_appointments():
+    return jsonify(list(db.get_all_planned_appointments())), 200
+
+
+@app.get("/api/planned-appointments/<int:planned_appointment_id>")
+@app.get("/api/planned_appointments/<int:planned_appointment_id>")
+def get_planned_appointment(planned_appointment_id: int):
+    return _get(db.get_planned_appointment(planned_appointment_id))
+
+
+@app.patch("/api/planned-appointments/<int:planned_appointment_id>")
+@app.put("/api/planned-appointments/<int:planned_appointment_id>")
+@app.patch("/api/planned_appointments/<int:planned_appointment_id>")
+@app.put("/api/planned_appointments/<int:planned_appointment_id>")
+def update_planned_appointment(planned_appointment_id: int):
+    return _update(lambda data: db.update_planned_appointment(planned_appointment_id, data))
+
+
+@app.delete("/api/planned-appointments/<int:planned_appointment_id>")
+@app.delete("/api/planned_appointments/<int:planned_appointment_id>")
+def delete_planned_appointment(planned_appointment_id: int):
+    return _delete(lambda: db.delete_planned_appointment(planned_appointment_id))
 
 
 if __name__ == "__main__":
