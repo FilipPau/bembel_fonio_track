@@ -1,6 +1,6 @@
-# Project Name
+# Appointment Manager
 
-One-line description of what your team built for the **Fonio* track.
+An appointment management system. 
 
 A submission for **START Hack Vienna '26**, built for the case provided by
 **Fonio**.
@@ -9,85 +9,50 @@ A submission for **START Hack Vienna '26**, built for the case provided by
 
 ## About
 
-Briefly describe the problem your track addresses and what your solution does
-(2–4 sentences). Keep it understandable for someone seeing the project for the
-first time.
+The current problem is that many clinics have to manage all their appintments manualy, which costs time and money since it leads to empty time slots in the time table.
+Our solution manages the timetable completly autonomously. The customers cann call and get/move/cancle an appointment.
 
 ## The challenge
 
 A short summary of the case you were given and the outcome you set out to achieve.
 
+The case we were given was about the topic of appointment management. Our goal was to make it so good that the staff will never have the need to manage the phone calls by them self.
+
 ## What we built
 
-- Key feature 1
-- Key feature 2
-- Key feature 3
+- Appointment Creation
+- Appointment Deletion
+- Appointment Rescheduling
 
 ## Demo
 
-- Live demo: `<link or "run locally, see below">`
 - Screenshots / video: `<link>`
 
 ---
 
-## Getting started
-
-### Prerequisites
-
-List what someone needs installed to run the project (e.g. the tools and runtimes).
-
-### Setup
-
-```bash
-# 1. Clone the repository
-git clone <your-repo-url>
-cd <your-repo>
-
-# 2. Configure environment
-cp .env.example .env
-# fill in the required values (see .env.example)
-
-# 3. Install / build
-# <your install/build commands here>
-```
-
-### Run
-
-```bash
-# <your run command here>
-```
-
-Then open `<URL>` in your browser.
-
----
 
 ## Project structure
 
 ```
-<a short overview of the main folders/components>
+Backend -> Contains Backend and Database
+Frontend
 ```
 
-## Configuration
-
-Document the environment variables / settings the project needs. **Never commit
-secrets** — keep them in `.env` (which is git-ignored) and provide a `.env.example`.
 
 ## Architecture & assumptions
 
 A few sentences on how the pieces fit together and any assumptions you made.
 
-## Troubleshooting
-
-- Problem → fix
-- Problem → fix
+Our architecture is build so that Fonio.ai is our human to machine interface. Fonio then communicated with our custom backend which managed all the logic for the time management.
 
 ---
 
 ## Team
 
-- Name 1 — role
-- Name 2 — role
-- Name 3 — role
+- Shane -> Fonio.ai 
+- Filip —> Team Lead
+- Markus —> Backend/Database
+- Simrith —> Frontend
 
 ## Submission
 
