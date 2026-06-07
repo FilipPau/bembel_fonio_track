@@ -1,0 +1,251 @@
+<div class="space-y-6">
+  <div>
+    <h1 class="text-3xl font-bold text-gray-900">Practice Resources</h1>
+    <p class="mt-1 text-gray-600">Manage treatment rooms, practicing doctors, and the shift coverage used by appointment search.</p>
+  </div>
+
+  @if (notice(); as activeNotice) {
+    <section
+      class="flex items-start justify-between gap-4 rounded-lg border px-4 py-3 text-sm shadow-sm"
+      [ngClass]="{
+        'border-emerald-200 bg-emerald-50 text-emerald-900': activeNotice.kind === 'success',
+        'border-red-200 bg-red-50 text-red-900': activeNotice.kind === 'error',
+        'border-blue-200 bg-blue-50 text-blue-900': activeNotice.kind === 'info'
+      }">
+      <p>{{ activeNotice.message }}</p>
+      <button type="button" (click)="notice.set(null)" class="shrink-0 rounded-md px-2 py-1 text-xs font-semibold hover:bg-white/70">Dismiss</button>
+    </section>
+  }
+
+  @if (loading()) {
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      @for (item of [1, 2]; track item) {
+        <section class="skeleton-card">
+          <span class="skeleton skeleton-title w-44"></span>
+          <span class="skeleton skeleton-line mt-2 w-64"></span>
+          <div class="mt-5 space-y-3">
+            <span class="skeleton h-10 w-full"></span>
+            <span class="skeleton h-12 w-full"></span>
+            <span class="skeleton h-12 w-full"></span>
+          </div>
+        </section>
+      }
+    </div>
+    <section class="skeleton-card">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div class="min-w-0 flex-1">
+          <span class="skeleton skeleton-title w-32"></span>
+          <span class="skeleton skeleton-line mt-2 w-72"></span>
+        </div>
+        <span class="skeleton skeleton-pill w-28"></span>
+      </div>
+      <div class="mt-5 space-y-4">
+        @for (item of [1, 2, 3]; track item) {
+          <div class="rounded-lg border border-gray-200 p-4">
+            <span class="skeleton skeleton-title w-40"></span>
+            <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[140px_minmax(0,1fr)_120px]">
+              <span class="skeleton h-12 w-full"></span>
+              <span class="skeleton h-12 w-full"></span>
+              <span class="skeleton h-8 w-full"></span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  } @else {
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    <section class="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div class="border-b border-gray-200 px-5 py-4">
+        <h2 class="text-lg font-semibold text-gray-900">Treatment Rooms</h2>
+        <p class="mt-1 text-sm text-gray-500">Rooms only need a clear display name.</p>
+      </div>
+
+      <div class="px-5 py-4">
+        <p class="text-sm font-semibold uppercase tracking-wide text-gray-500">Create room</p>
+        <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+          <input [ngModel]="roomForm().name" (ngModelChange)="updateRoomName($event)" placeholder="Room name" class="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button (click)="addRoom()" [disabled]="saving()" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+            {{ saving() ? 'Saving...' : 'Add room' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-200 px-5 py-4">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-semibold uppercase tracking-wide text-gray-500">Existing rooms</p>
+          <p class="text-sm text-gray-500">{{ resources().rooms.length }} rooms</p>
+        </div>
+        <div class="mt-3 divide-y divide-gray-100 rounded-md border border-gray-200">
+          @for (room of resources().rooms; track room.id) {
+            <div class="flex items-center justify-between gap-4 px-4 py-3">
+              <p class="font-semibold text-gray-900">{{ room.name }}</p>
+              <button (click)="removeRoom(room.id)" [disabled]="saving()" class="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300">Remove</button>
+            </div>
+          } @empty {
+            @if (loadFailed()) {
+              <div class="empty-state compact m-3">
+                <span class="empty-face" aria-hidden="true"></span>
+                <p class="font-semibold text-gray-900">Rooms did not load.</p>
+                <p class="text-sm text-gray-500">Check the backend connection and try again.</p>
+              </div>
+            } @else {
+              <div class="m-3 rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                No rooms yet. Create the first treatment room above.
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div class="border-b border-gray-200 px-5 py-4">
+        <h2 class="text-lg font-semibold text-gray-900">Practicing Doctors</h2>
+        <p class="mt-1 text-sm text-gray-500">Create doctors and add only the treatments they can perform.</p>
+      </div>
+
+      <div class="px-5 py-4">
+        <p class="text-sm font-semibold uppercase tracking-wide text-gray-500">Create doctor</p>
+        <input [ngModel]="doctorForm().name" (ngModelChange)="updateDoctorName($event)" placeholder="Doctor name" class="mt-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+        <div class="mt-4">
+          <span class="text-sm font-medium text-gray-700">Treatments</span>
+          <div class="mt-2 min-h-11 rounded-md border border-gray-200 bg-gray-50 p-2">
+            @if (doctorForm().treatments.length) {
+              <div class="flex flex-wrap gap-2">
+                @for (treatment of doctorForm().treatments; track treatment) {
+                  <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-100">
+                    {{ treatment }}
+                    <button (click)="removeTreatment(treatment)" class="rounded-full px-1 text-blue-500 hover:bg-blue-100 hover:text-blue-800" [attr.aria-label]="'Remove ' + treatment">x</button>
+                  </span>
+                }
+              </div>
+            } @else {
+              <div class="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500">
+                No treatments selected yet. Search and add treatments below.
+              </div>
+            }
+          </div>
+
+          <div class="mt-3">
+            <input [ngModel]="treatmentSearch()" (ngModelChange)="updateTreatmentSearch($event)" placeholder="Search treatment to add" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div class="mt-2 max-h-44 overflow-auto rounded-md border border-gray-200 bg-white">
+              @for (treatment of filteredTreatmentOptions(); track treatment) {
+                <button (click)="addTreatment(treatment)" class="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50">
+                  <span>{{ treatment }}</span>
+                  <span class="text-xs font-semibold text-blue-600">Add</span>
+                </button>
+              } @empty {
+                @if (loadFailed() && treatmentOptions().length === 0) {
+                  <div class="empty-state compact m-2">
+                    <span class="empty-face" aria-hidden="true"></span>
+                    <p class="font-semibold text-gray-900">Treatments did not load.</p>
+                    <p class="text-sm text-gray-500">Check the backend connection and try again.</p>
+                  </div>
+                } @else {
+                  <div class="m-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                    No matching treatment. Try a different search term.
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+        <button (click)="addDoctor()" [disabled]="saving()" class="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+          {{ saving() ? 'Saving...' : 'Add doctor' }}
+        </button>
+      </div>
+
+      <div class="border-t border-gray-200 px-5 py-4">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-semibold uppercase tracking-wide text-gray-500">Existing doctors</p>
+          <p class="text-sm text-gray-500">{{ resources().doctors.length }} doctors</p>
+        </div>
+        <div class="mt-3 divide-y divide-gray-100 rounded-md border border-gray-200">
+          @for (doctor of resources().doctors; track doctor.id) {
+            <div class="flex items-start justify-between gap-4 px-4 py-3">
+              <div>
+                <p class="font-semibold text-gray-900">{{ doctor.name }}</p>
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  @for (treatment of doctor.treatments; track treatment) {
+                    <span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{{ treatment }}</span>
+                  }
+                </div>
+              </div>
+              <button (click)="removeDoctor(doctor.id)" [disabled]="saving()" class="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300">Remove</button>
+            </div>
+          } @empty {
+            @if (loadFailed()) {
+              <div class="empty-state compact m-3">
+                <span class="empty-face" aria-hidden="true"></span>
+                <p class="font-semibold text-gray-900">Doctors did not load.</p>
+                <p class="text-sm text-gray-500">Check the backend connection and try again.</p>
+              </div>
+            } @else {
+              <div class="m-3 rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                No doctors yet. Create a practicing doctor above.
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">Staff Shifts</h2>
+        <p class="mt-1 text-sm text-gray-500">These shifts define when a doctor is available in a room for earliest-slot search.</p>
+      </div>
+      <p class="rounded-full bg-yellow-50 px-3 py-1 text-sm font-medium text-yellow-800 ring-1 ring-yellow-200">{{ resources().staffShifts.length }} shifts planned</p>
+    </div>
+
+    <div class="mt-5 space-y-4">
+      @for (day of staffShiftDays(); track day.dateKey) {
+        <article class="overflow-hidden rounded-lg border border-gray-200">
+          <div class="flex flex-col gap-1 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 class="font-semibold text-gray-950">{{ day.label }}</h3>
+            <p class="text-sm text-gray-500">{{ day.shifts.length }} coverage blocks</p>
+          </div>
+          <div class="divide-y divide-gray-100">
+            @for (shift of day.shifts; track shift.id) {
+              <div class="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[140px_minmax(0,1fr)_120px] md:items-center">
+                <div>
+                  <p class="font-semibold text-gray-900">{{ formatShiftTime(shift) }}</p>
+                  <p class="mt-0.5 text-xs text-gray-500">{{ shiftDuration(shift) }}</p>
+                </div>
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div class="rounded-md bg-blue-50 px-3 py-2 ring-1 ring-blue-100">
+                    <p class="text-xs font-semibold uppercase text-blue-500">Doctor</p>
+                    <p class="mt-1 text-sm font-medium text-blue-950">{{ doctorName(shift.doctorId) }}</p>
+                  </div>
+                  <div class="rounded-md bg-yellow-50 px-3 py-2 ring-1 ring-yellow-100">
+                    <p class="text-xs font-semibold uppercase text-yellow-600">Room</p>
+                    <p class="mt-1 text-sm font-medium text-yellow-950">{{ roomName(shift.roomId) }}</p>
+                  </div>
+                </div>
+                <div class="justify-self-start rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 md:justify-self-end">
+                  {{ shift.id }}
+                </div>
+              </div>
+            }
+          </div>
+        </article>
+      } @empty {
+        @if (loadFailed()) {
+          <div class="empty-state">
+            <span class="empty-face" aria-hidden="true"></span>
+            <p class="font-semibold text-gray-900">Staff shifts did not load.</p>
+            <p class="text-sm text-gray-500">Check the backend connection and try again.</p>
+          </div>
+        } @else {
+          <div class="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+            No staff shifts planned. Earliest-slot search will work once shift coverage is available.
+          </div>
+        }
+      }
+    </div>
+  </section>
+  }
+</div>

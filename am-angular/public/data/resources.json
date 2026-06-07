@@ -1,0 +1,98 @@
+{
+  "rooms": [
+    {
+      "id": "room-1",
+      "name": "Treatment Room 1"
+    },
+    {
+      "id": "room-2",
+      "name": "Treatment Room 2"
+    },
+    {
+      "id": "room-3",
+      "name": "Surgery Room"
+    }
+  ],
+  "doctors": [
+    {
+      "id": "doc-huber",
+      "name": "Dr. Anna Huber",
+      "treatments": ["Routine check", "Follow-up", "Tooth pain", "Root canal"]
+    },
+    {
+      "id": "doc-stein",
+      "name": "Dr. Lukas Stein",
+      "treatments": ["Tooth pain", "Implant consultation", "Root canal", "Emergency treatment"]
+    },
+    {
+      "id": "doc-novak",
+      "name": "Dr. Elena Novak",
+      "treatments": ["Routine check", "Professional cleaning", "Orthodontic consult", "Follow-up"]
+    }
+  ],
+  "staffShifts": [
+    {
+      "id": "shift-1",
+      "doctorId": "doc-huber",
+      "roomId": "room-1",
+      "start": "2026-06-08T08:00:00",
+      "end": "2026-06-08T13:00:00"
+    },
+    {
+      "id": "shift-2",
+      "doctorId": "doc-huber",
+      "roomId": "room-2",
+      "start": "2026-06-08T14:00:00",
+      "end": "2026-06-08T18:00:00"
+    },
+    {
+      "id": "shift-3",
+      "doctorId": "doc-stein",
+      "roomId": "room-3",
+      "start": "2026-06-09T09:00:00",
+      "end": "2026-06-09T17:00:00"
+    },
+    {
+      "id": "shift-4",
+      "doctorId": "doc-novak",
+      "roomId": "room-2",
+      "start": "2026-06-10T08:00:00",
+      "end": "2026-06-10T14:00:00"
+    },
+    {
+      "id": "shift-5",
+      "doctorId": "doc-stein",
+      "roomId": "room-3",
+      "start": "2026-06-11T10:00:00",
+      "end": "2026-06-11T18:00:00"
+    },
+    {
+      "id": "shift-6",
+      "doctorId": "doc-novak",
+      "roomId": "room-1",
+      "start": "2026-06-12T08:00:00",
+      "end": "2026-06-12T16:00:00"
+    },
+    {
+      "id": "shift-7",
+      "doctorId": "doc-huber",
+      "roomId": "room-1",
+      "start": "2026-06-15T08:00:00",
+      "end": "2026-06-15T16:00:00"
+    },
+    {
+      "id": "shift-8",
+      "doctorId": "doc-novak",
+      "roomId": "room-2",
+      "start": "2026-06-16T08:00:00",
+      "end": "2026-06-16T15:00:00"
+    },
+    {
+      "id": "shift-9",
+      "doctorId": "doc-stein",
+      "roomId": "room-3",
+      "start": "2026-06-17T09:00:00",
+      "end": "2026-06-17T17:00:00"
+    }
+  ]
+}

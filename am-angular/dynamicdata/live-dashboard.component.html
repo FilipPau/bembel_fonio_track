@@ -1,0 +1,208 @@
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Live Operations</h1>
+      <p class="mt-1 text-gray-600">Weekly cancellation refill performance with realistic mockup data.</p>
+    </div>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="flex items-center rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+        <button type="button" class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100" (click)="moveWeek(-7)">Previous</button>
+        <button type="button" class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-900 transition hover:bg-gray-100" (click)="currentWeek()">This week</button>
+        <button type="button" class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100" (click)="moveWeek(7)">Next</button>
+      </div>
+      <div class="rounded-full border px-3 py-1.5 text-sm font-medium"
+        [class.border-blue-200]="!loadFailed()"
+        [class.bg-blue-50]="!loadFailed()"
+        [class.text-blue-700]="!loadFailed()"
+        [class.border-red-200]="loadFailed()"
+        [class.bg-red-50]="loadFailed()"
+        [class.text-red-700]="loadFailed()">
+        {{ connectionLabel() }}
+      </div>
+    </div>
+  </div>
+
+  <section class="rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-sm font-medium text-gray-500">Selected week</p>
+        <p class="text-xl font-semibold text-gray-900">{{ weekLabel() }}</p>
+      </div>
+      <p class="text-sm text-gray-500">Updated {{ metrics().updatedAt | date:'MMM d, HH:mm' }}</p>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <section class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+      @for (item of [1, 2, 3, 4]; track item) {
+        <div class="skeleton-card">
+          <span class="skeleton skeleton-line w-28"></span>
+          <span class="skeleton mt-3 h-9 w-20"></span>
+          <span class="skeleton skeleton-line mt-3 w-40"></span>
+        </div>
+      }
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div class="skeleton-card">
+        <span class="skeleton skeleton-title w-32"></span>
+        <div class="mx-auto mt-8 h-48 w-48 rounded-full skeleton"></div>
+      </div>
+      <div class="skeleton-card">
+        <span class="skeleton skeleton-title w-48"></span>
+        <div class="mt-6 flex h-56 items-end gap-3">
+          @for (item of [1, 2, 3, 4, 5, 6, 7]; track item) {
+            <span class="skeleton w-full rounded-t-md" [style.height.%]="20 + item * 9"></span>
+          }
+        </div>
+      </div>
+    </section>
+  } @else if (loadFailed() && !hasLoaded()) {
+    <section class="empty-state">
+      <span class="empty-face" aria-hidden="true"></span>
+      <p class="font-semibold text-gray-900">Live Operations could not connect.</p>
+      <p class="max-w-xl text-sm text-gray-500">{{ errorMessage() }}</p>
+    </section>
+  } @else {
+    @if (loadFailed()) {
+      <section class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        Latest refresh failed. Showing the most recent live data that was loaded successfully.
+      </section>
+    }
+
+    @if (hasNoWeeklyData()) {
+      <section class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+        No refill activity was recorded for this week yet.
+      </section>
+    }
+
+    <section class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+      @for (metric of weeklyMetrics(); track metric.label) {
+        <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-medium text-gray-600">{{ metric.label }}</p>
+            <span class="rounded-full border px-2 py-0.5 text-xs font-semibold" [class]="metricClass(metric.tone)">Week</span>
+          </div>
+          <p class="mt-3 text-3xl font-bold text-gray-900">{{ metric.value }}</p>
+          <p class="mt-2 min-h-10 text-sm text-gray-500">{{ metric.delta }}</p>
+        </div>
+      }
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Refill Rate</h2>
+            <p class="mt-1 text-sm text-gray-500">{{ metrics().openSlots }} slots still open</p>
+          </div>
+          <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            {{ metrics().filledSlots }} filled
+          </span>
+        </div>
+
+        <div class="mt-7 flex items-center justify-center">
+          <div class="relative flex h-48 w-48 items-center justify-center rounded-full transition duration-500" [style.background]="refillRingStyle()">
+            <div class="flex h-32 w-32 flex-col items-center justify-center rounded-full bg-white shadow-inner">
+              <p class="text-4xl font-bold text-gray-900">{{ refillRatePercent() }}%</p>
+              <p class="text-sm text-gray-500">refilled</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-2 gap-3">
+          <div class="rounded-md bg-emerald-50 px-3 py-2">
+            <p class="text-xs font-medium text-emerald-700">Filled slots</p>
+            <p class="mt-1 text-xl font-semibold text-emerald-900">{{ metrics().filledSlots }}</p>
+          </div>
+          <div class="rounded-md bg-gray-50 px-3 py-2">
+            <p class="text-xs font-medium text-gray-600">Open slots</p>
+            <p class="mt-1 text-xl font-semibold text-gray-900">{{ metrics().openSlots }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Revenue Recovered</h2>
+            <p class="mt-1 text-sm text-gray-500">{{ metrics().recoveredMinutes }} minutes converted back into appointments</p>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{{ metrics().revenueRecovered | currency:'USD':'symbol':'1.0-0' }}</p>
+        </div>
+
+        <div class="mt-6 flex h-56 items-end gap-3 rounded-lg bg-gray-50 px-4 py-4">
+          @for (point of metrics().dailyRevenue; track point.label) {
+            <div class="flex h-full min-w-0 flex-1 flex-col justify-end gap-2">
+              <div class="relative flex flex-1 items-end">
+                <div class="w-full rounded-t-md bg-blue-500 shadow-sm transition-all duration-500" [style.height.%]="point.height"></div>
+              </div>
+              <p class="truncate text-center text-xs font-medium text-gray-500">{{ point.label }}</p>
+              <p class="truncate text-center text-xs text-gray-400">{{ point.revenue | currency:'USD':'symbol':'1.0-0' }}</p>
+            </div>
+          } @empty {
+            <div class="flex h-full w-full items-center justify-center text-sm text-gray-500">No daily revenue data yet.</div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Attempts Per Slot</h2>
+            <p class="mt-1 text-sm text-gray-500">{{ metrics().totalAttempts }} outreach attempts this week</p>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{{ metrics().attemptsPerSlot.toFixed(1) }}</p>
+        </div>
+
+        <div class="mt-6 flex h-44 items-end gap-3 rounded-lg bg-gray-50 px-4 py-4">
+          @for (point of metrics().dailyAttempts; track point.label) {
+            <div class="flex h-full min-w-0 flex-1 flex-col justify-end gap-2">
+              <div class="relative flex flex-1 items-end">
+                <div class="w-full rounded-t-md bg-amber-500 shadow-sm transition-all duration-500" [style.height.%]="point.height"></div>
+              </div>
+              <p class="truncate text-center text-xs font-medium text-gray-500">{{ point.label }}</p>
+              <p class="truncate text-center text-xs text-gray-400">{{ point.attempts }}</p>
+            </div>
+          } @empty {
+            <div class="flex h-full w-full items-center justify-center text-sm text-gray-500">No daily attempt data yet.</div>
+          }
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900">Outcomes By Reason</h2>
+        <p class="mt-1 text-sm text-gray-500">{{ bestOutcome().reason }} is the largest category</p>
+
+        <div class="mt-6 h-3 overflow-hidden rounded-full bg-gray-100">
+          @for (outcome of metrics().outcomes; track outcome.reason) {
+            <div class="inline-block h-full transition-all duration-500" [ngClass]="outcome.color" [style.width]="outcomeWidth(outcome.count)"></div>
+          }
+        </div>
+
+        <div class="mt-6 space-y-4">
+          @for (outcome of metrics().outcomes; track outcome.reason) {
+            <div>
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-2">
+                  <span class="h-2.5 w-2.5 shrink-0 rounded-full" [ngClass]="outcome.color"></span>
+                  <p class="truncate text-sm font-medium text-gray-800">{{ outcome.reason }}</p>
+                </div>
+                <p class="shrink-0 text-sm text-gray-500">{{ outcome.count }} - {{ outcomeShare(outcome.count) }}%</p>
+              </div>
+              <div class="mt-2 h-2 rounded-full bg-gray-100">
+                <div class="h-2 rounded-full transition-all duration-500" [ngClass]="outcome.color" [style.width]="outcomeWidth(outcome.count)"></div>
+              </div>
+            </div>
+          } @empty {
+            <div class="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              No call outcomes were recorded for this week yet.
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+</div>

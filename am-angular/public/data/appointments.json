@@ -1,0 +1,68 @@
+[
+  {
+    "id": "appt-1001",
+    "svnr": "1537081284",
+    "patientName": "Mara Klein",
+    "phone": "+43 660 1234567",
+    "reason": "Routine check",
+    "durationMinutes": 30,
+    "roomId": "room-1",
+    "doctorId": "doc-huber",
+    "start": "2026-06-08T09:00:00"
+  },
+  {
+    "id": "appt-1002",
+    "svnr": "2846090979",
+    "patientName": "Jonas Weber",
+    "phone": "+43 676 1188224",
+    "reason": "Follow-up",
+    "durationMinutes": 45,
+    "roomId": "room-2",
+    "doctorId": "doc-huber",
+    "start": "2026-06-08T14:30:00"
+  },
+  {
+    "id": "appt-1003",
+    "svnr": "3914110588",
+    "patientName": "Elena Gruber",
+    "phone": "+43 699 4455667",
+    "reason": "Tooth pain",
+    "durationMinutes": 30,
+    "roomId": "room-3",
+    "doctorId": "doc-stein",
+    "start": "2026-06-09T14:00:00"
+  },
+  {
+    "id": "appt-1004",
+    "svnr": "4488120662",
+    "patientName": "Anton Berger",
+    "phone": "+43 664 9081726",
+    "reason": "Professional cleaning",
+    "durationMinutes": 60,
+    "roomId": "room-2",
+    "doctorId": "doc-novak",
+    "start": "2026-06-10T08:30:00"
+  },
+  {
+    "id": "appt-1005",
+    "svnr": "5120010143",
+    "patientName": "Sofia Leitner",
+    "phone": "+43 650 3344551",
+    "reason": "Implant consultation",
+    "durationMinutes": 60,
+    "roomId": "room-3",
+    "doctorId": "doc-stein",
+    "start": "2026-06-11T11:00:00"
+  },
+  {
+    "id": "appt-1006",
+    "svnr": "1537081284",
+    "patientName": "Mara Klein",
+    "phone": "+43 660 1234567",
+    "reason": "Orthodontic consult",
+    "durationMinutes": 45,
+    "roomId": "room-1",
+    "doctorId": "doc-novak",
+    "start": "2026-06-12T13:30:00"
+  }
+]

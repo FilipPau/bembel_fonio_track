@@ -1,0 +1,466 @@
+<div class="space-y-6">
+  <ng-template #calendarEventTitle let-event="event">
+    <span class="group relative block cursor-pointer truncate text-xs font-semibold text-blue-950">
+      {{ event.meta.appointment.patientName }} - {{ event.meta.appointment.reason }}
+      <span class="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden w-64 rounded-md border border-gray-200 bg-white p-3 text-left text-xs font-normal leading-5 text-gray-700 shadow-lg group-hover:block">
+        <span class="block font-semibold text-gray-950">{{ event.meta.appointment.patientName }}</span>
+        <span class="block">{{ roomName(event.meta.appointment.roomId) }}</span>
+        <span class="block">{{ doctorName(event.meta.appointment.doctorId) }}</span>
+        <span class="block">{{ event.meta.appointment.reason }}</span>
+        <span class="block">{{ appointmentTooltip(event.meta.appointment).split('\n')[4] }}</span>
+      </span>
+    </span>
+  </ng-template>
+
+  <div>
+    <h1 class="text-3xl font-bold text-gray-900">Book Appointment</h1>
+    <p class="mt-1 text-gray-600">Add, remove, edit, and find appointments by treatment room or practicing doctor.</p>
+  </div>
+
+  @if (notice(); as activeNotice) {
+    <section
+      class="flex items-start justify-between gap-4 rounded-lg border px-4 py-3 text-sm shadow-sm"
+      [ngClass]="{
+        'border-emerald-200 bg-emerald-50 text-emerald-900': activeNotice.kind === 'success',
+        'border-red-200 bg-red-50 text-red-900': activeNotice.kind === 'error',
+        'border-blue-200 bg-blue-50 text-blue-900': activeNotice.kind === 'info'
+      }">
+      <p>{{ activeNotice.message }}</p>
+      <button type="button" (click)="notice.set(null)" class="shrink-0 rounded-md px-2 py-1 text-xs font-semibold hover:bg-white/70">Dismiss</button>
+    </section>
+  }
+
+  @if (loading()) {
+    <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <div>
+          <span class="skeleton skeleton-line w-16"></span>
+          <span class="skeleton mt-2 h-10 w-full"></span>
+        </div>
+        <div>
+          <span class="skeleton skeleton-line w-24"></span>
+          <span class="skeleton mt-2 h-10 w-full"></span>
+        </div>
+        <div class="rounded-md bg-gray-50 px-4 py-3 lg:col-span-2">
+          <span class="skeleton skeleton-line w-12"></span>
+          <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span class="skeleton skeleton-title w-52"></span>
+            <div class="flex items-center gap-2">
+              <span class="skeleton h-9 w-28"></span>
+              <span class="skeleton h-9 w-24"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-3">
+        <span class="skeleton skeleton-pill w-28"></span>
+        <span class="skeleton skeleton-pill w-40"></span>
+      </div>
+    </section>
+  } @else {
+  <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <label class="block">
+        <span class="text-sm font-medium text-gray-700">View</span>
+        <select [ngModel]="mode()" (ngModelChange)="mode.set($event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="rooms">Treatment rooms</option>
+          <option value="doctors">Practicing doctors</option>
+        </select>
+      </label>
+
+      @if (mode() === 'rooms') {
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Room filter</span>
+          <select [ngModel]="selectedRoomId()" (ngModelChange)="selectedRoomId.set($event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">All rooms</option>
+            @for (room of resources().rooms; track room.id) {
+              <option [value]="room.id">{{ room.name }}</option>
+            }
+          </select>
+        </label>
+      } @else {
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Doctor filter</span>
+          <select [ngModel]="selectedDoctorId()" (ngModelChange)="selectedDoctorId.set($event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">All doctors</option>
+            @for (doctor of resources().doctors; track doctor.id) {
+              <option [value]="doctor.id">{{ doctor.name }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      <div class="rounded-md bg-gray-50 px-4 py-3 lg:col-span-2">
+        <p class="text-sm font-medium text-gray-500">Week</p>
+        <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-lg font-semibold text-gray-900">{{ viewDate() | date:'dd MMM yyyy' }} - {{ weekEnd() | date:'dd MMM yyyy' }}</p>
+          <div class="flex items-center gap-2">
+            <button (click)="previousWeek()" class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Previous week</button>
+            <button (click)="nextWeek()" class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Next week</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-3 text-xs text-gray-600">
+      <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-sm bg-blue-200 ring-1 ring-blue-600"></span> Appointment</span>
+      <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-sm bg-yellow-100 ring-1 ring-yellow-600"></span> Staffed shift / room covered</span>
+    </div>
+  </section>
+  }
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
+    <section class="space-y-6">
+      @if (loading()) {
+        @for (item of [1, 2]; track item) {
+          <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="border-b border-gray-200 px-5 py-4">
+              <span class="skeleton skeleton-title w-32"></span>
+              <span class="skeleton skeleton-line mt-2 w-56"></span>
+            </div>
+            <div class="p-4">
+              <div class="skeleton-calendar"></div>
+            </div>
+          </section>
+        }
+      } @else if (mode() === 'rooms') {
+        @for (room of visibleRooms(); track room.id) {
+          <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="border-b border-gray-200 px-5 py-4">
+              <h2 class="text-lg font-semibold text-gray-900">{{ room.name }}</h2>
+              <p class="text-sm text-gray-500">Appointments and staffed coverage</p>
+            </div>
+            <div class="p-4">
+              <ng-template #roomHourSegment let-segment="segment" let-segmentHeight="segmentHeight" let-isTimeLabel="isTimeLabel">
+                <div
+                  class="cal-hour-segment"
+                  [style.height.px]="segmentHeight"
+                  [class.cal-hour-start]="segment.isStart"
+                  [class.cal-after-hour-start]="!segment.isStart"
+                  [class.staffed-segment]="!isTimeLabel && isRoomSegmentStaffed(segment.date, room.id)"
+                  [class.staffed-segment-start]="!isTimeLabel && isRoomShiftStartSegment(segment.date, room.id)"
+                  [class.staffed-segment-end]="!isTimeLabel && isRoomShiftEndSegment(segment.date, room.id)"
+                  [ngClass]="segment.cssClass">
+                  @if (isTimeLabel) {
+                    <div class="cal-time">{{ segment.displayDate | date:'HH:mm' }}</div>
+                  }
+                  @if (!isTimeLabel) {
+                    @if (roomSegmentShiftLabel(segment.date, room.id); as shiftLabel) {
+                      <span class="staff-shift-label">{{ shiftLabel }}</span>
+                    }
+                  }
+                </div>
+              </ng-template>
+              <mwl-calendar-week-view
+                [viewDate]="viewDate()"
+                [events]="eventsForRoom(room.id)"
+                [dayStartHour]="8"
+                [dayEndHour]="18"
+                [hourSegments]="2"
+                [weekStartsOn]="1"
+                [eventTitleTemplate]="calendarEventTitle"
+                [hourSegmentTemplate]="roomHourSegment"
+                (eventClicked)="selectEvent($event.event)">
+              </mwl-calendar-week-view>
+            </div>
+          </section>
+        } @empty {
+          <div class="empty-state">
+            <span class="empty-face" aria-hidden="true"></span>
+            <p class="font-semibold text-gray-900">No treatment rooms loaded.</p>
+            <p class="text-sm text-gray-500">The calendar needs rooms before appointments can be displayed.</p>
+          </div>
+        }
+      } @else {
+        @for (doctor of visibleDoctors(); track doctor.id) {
+          <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="border-b border-gray-200 px-5 py-4">
+              <h2 class="text-lg font-semibold text-gray-900">{{ doctor.name }}</h2>
+              <p class="text-sm text-gray-500">{{ doctor.treatments.join(', ') }}</p>
+            </div>
+            <div class="p-4">
+              <ng-template #doctorHourSegment let-segment="segment" let-segmentHeight="segmentHeight" let-isTimeLabel="isTimeLabel">
+                <div
+                  class="cal-hour-segment"
+                  [style.height.px]="segmentHeight"
+                  [class.cal-hour-start]="segment.isStart"
+                  [class.cal-after-hour-start]="!segment.isStart"
+                  [class.staffed-segment]="!isTimeLabel && isDoctorSegmentStaffed(segment.date, doctor.id)"
+                  [class.staffed-segment-start]="!isTimeLabel && isDoctorShiftStartSegment(segment.date, doctor.id)"
+                  [class.staffed-segment-end]="!isTimeLabel && isDoctorShiftEndSegment(segment.date, doctor.id)"
+                  [ngClass]="segment.cssClass">
+                  @if (isTimeLabel) {
+                    <div class="cal-time">{{ segment.displayDate | date:'HH:mm' }}</div>
+                  }
+                  @if (!isTimeLabel) {
+                    @if (doctorSegmentShiftLabel(segment.date, doctor.id); as shiftLabel) {
+                      <span class="staff-shift-label">{{ shiftLabel }}</span>
+                    }
+                  }
+                </div>
+              </ng-template>
+              <mwl-calendar-week-view
+                [viewDate]="viewDate()"
+                [events]="eventsForDoctor(doctor.id)"
+                [dayStartHour]="8"
+                [dayEndHour]="18"
+                [hourSegments]="2"
+                [weekStartsOn]="1"
+                [eventTitleTemplate]="calendarEventTitle"
+                [hourSegmentTemplate]="doctorHourSegment"
+                (eventClicked)="selectEvent($event.event)">
+              </mwl-calendar-week-view>
+            </div>
+          </section>
+        } @empty {
+          <div class="empty-state">
+            <span class="empty-face" aria-hidden="true"></span>
+            <p class="font-semibold text-gray-900">No practicing doctors loaded.</p>
+            <p class="text-sm text-gray-500">Doctor calendars will appear once the API returns staff data.</p>
+          </div>
+        }
+      }
+    </section>
+
+    <aside class="space-y-6">
+      @if (loading()) {
+        @for (item of [1, 2, 3]; track item) {
+          <section class="skeleton-card">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0 flex-1">
+                <span class="skeleton skeleton-title w-44"></span>
+                <span class="skeleton skeleton-line mt-2 w-56"></span>
+              </div>
+              <span class="skeleton h-8 w-20"></span>
+            </div>
+            <div class="mt-5 space-y-3">
+              <span class="skeleton h-10 w-full"></span>
+              <span class="skeleton h-10 w-full"></span>
+              <span class="skeleton h-10 w-full"></span>
+            </div>
+          </section>
+        }
+      } @else {
+      <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Find Earliest Slot</h2>
+            <p class="mt-1 text-sm text-gray-500">Duration is required. Room and doctor can stay flexible.</p>
+          </div>
+          <button type="button" (click)="finderExpanded.set(!finderExpanded())" class="inline-flex shrink-0 items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <span>{{ finderExpanded() ? 'Collapse' : 'Expand' }}</span>
+            <svg class="h-4 w-4 transition-transform duration-200" [class.rotate-180]="finderExpanded()" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+        <div class="expand-panel" [class.expand-panel-open]="finderExpanded()" [attr.aria-hidden]="finderExpanded() ? null : true" [attr.inert]="finderExpanded() ? null : ''">
+          <div class="expand-panel-inner">
+          <div class="mt-4 grid grid-cols-1 gap-3">
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Duration</span>
+              <div class="mt-1 flex rounded-md border border-gray-300 focus-within:ring-2 focus-within:ring-blue-500">
+                <input type="number" min="5" step="5" required [ngModel]="finderForm().durationMinutes" (ngModelChange)="updateFinderForm('durationMinutes', $event === '' ? null : +$event)" class="w-full rounded-l-md border-0 px-3 py-2 text-sm focus:outline-none" />
+                <span class="rounded-r-md bg-gray-50 px-3 py-2 text-sm text-gray-500">min</span>
+              </div>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Treatment</span>
+              <select [ngModel]="finderForm().reason" (ngModelChange)="updateFinderForm('reason', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                @for (reason of reasons(); track reason) {
+                  <option [value]="reason">{{ reason }}</option>
+                } @empty {
+                  <option value="">No treatments loaded</option>
+                }
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Treatment room</span>
+              <select [ngModel]="finderForm().roomId" (ngModelChange)="updateFinderForm('roomId', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all">Any room</option>
+                @for (room of resources().rooms; track room.id) {
+                  <option [value]="room.id">{{ room.name }}</option>
+                } @empty {
+                  <option value="">No rooms loaded</option>
+                }
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Practicing doctor</span>
+              <select [ngModel]="finderForm().doctorId" (ngModelChange)="updateFinderForm('doctorId', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all">Any doctor</option>
+                @for (doctor of resources().doctors; track doctor.id) {
+                  <option [value]="doctor.id">{{ doctor.name }}</option>
+                } @empty {
+                  <option value="">No doctors loaded</option>
+                }
+              </select>
+            </label>
+            <button (click)="findEarliestAppointment()" class="rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100">Find earliest appointment</button>
+            @if (finderMessage()) {
+              <p class="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">{{ finderMessage() }}</p>
+            }
+          </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="text-lg font-semibold text-gray-900">Add Appointment</h2>
+          <button type="button" (click)="addAppointmentExpanded.set(!addAppointmentExpanded())" class="inline-flex shrink-0 items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <span>{{ addAppointmentExpanded() ? 'Collapse' : 'Expand' }}</span>
+            <svg class="h-4 w-4 transition-transform duration-200" [class.rotate-180]="addAppointmentExpanded()" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+        <div class="expand-panel" [class.expand-panel-open]="addAppointmentExpanded()" [attr.aria-hidden]="addAppointmentExpanded() ? null : true" [attr.inert]="addAppointmentExpanded() ? null : ''">
+          <div class="expand-panel-inner">
+          <div class="mt-5 space-y-4">
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">SVNR</span>
+              <div class="mt-1 flex gap-2">
+                <input [ngModel]="form().svnr" (ngModelChange)="updateForm('svnr', $event)" placeholder="1537081284" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <button (click)="fillPatientBySvnr()" class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Search</button>
+              </div>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Patient name</span>
+              <input [ngModel]="form().patientName" (ngModelChange)="updateForm('patientName', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Phone number</span>
+              <input [ngModel]="form().phone" (ngModelChange)="updateForm('phone', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Reason</span>
+              <select [ngModel]="form().reason" (ngModelChange)="updateForm('reason', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                @for (reason of reasons(); track reason) {
+                  <option [value]="reason">{{ reason }}</option>
+                } @empty {
+                  <option value="">No treatments loaded</option>
+                }
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Duration</span>
+              <div class="mt-1 flex rounded-md border border-gray-300 focus-within:ring-2 focus-within:ring-blue-500">
+                <input type="number" min="5" step="5" [ngModel]="form().durationMinutes" (ngModelChange)="updateForm('durationMinutes', $event === '' ? null : +$event)" class="w-full rounded-l-md border-0 px-3 py-2 text-sm focus:outline-none" />
+                <span class="rounded-r-md bg-gray-50 px-3 py-2 text-sm text-gray-500">min</span>
+              </div>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="text-sm font-medium text-gray-700">Date</span>
+                <input type="date" [ngModel]="form().date" (ngModelChange)="updateForm('date', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium text-gray-700">Time</span>
+                <input type="time" [ngModel]="form().time" (ngModelChange)="updateForm('time', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </label>
+            </div>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Treatment room</span>
+              <select [ngModel]="form().roomId" (ngModelChange)="updateForm('roomId', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                @for (room of resources().rooms; track room.id) {
+                  <option [value]="room.id">{{ room.name }}</option>
+                } @empty {
+                  <option value="">No rooms loaded</option>
+                }
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-gray-700">Practicing doctor</span>
+              <select [ngModel]="form().doctorId" (ngModelChange)="updateForm('doctorId', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                @for (doctor of resources().doctors; track doctor.id) {
+                  <option [value]="doctor.id">{{ doctor.name }}</option>
+                } @empty {
+                  <option value="">No doctors loaded</option>
+                }
+              </select>
+            </label>
+            <button (click)="addAppointment()" [disabled]="saving()" class="w-full rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+              {{ saving() ? 'Saving...' : 'Add appointment' }}
+            </button>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900">Upcoming Appointments</h2>
+        <div class="mt-4 space-y-3">
+          @for (appointment of upcomingAppointments(); track appointment.id) {
+            <button (click)="openAppointment(appointment.id)" [title]="appointmentTooltip(appointment)" class="w-full rounded-md border px-3 py-3 text-left transition hover:bg-gray-50" [class.border-blue-500]="selectedAppointmentId() === appointment.id" [class.bg-blue-50]="selectedAppointmentId() === appointment.id" [class.border-gray-200]="selectedAppointmentId() !== appointment.id">
+              <p class="text-sm font-semibold text-gray-900">{{ appointment.patientName }}</p>
+              <p class="mt-1 text-sm text-gray-500">{{ formatAppointmentTime(appointment) }} - {{ appointment.reason }}</p>
+              <p class="mt-1 text-xs text-gray-500">{{ roomName(appointment.roomId) }} - {{ doctorName(appointment.doctorId) }}</p>
+            </button>
+          } @empty {
+            <div class="empty-state compact">
+              <span class="empty-face" aria-hidden="true"></span>
+              <p class="font-semibold text-gray-900">No upcoming appointments.</p>
+              <p class="text-sm text-gray-500">New bookings will show up here.</p>
+            </div>
+          }
+        </div>
+      </section>
+      }
+    </aside>
+  </div>
+
+  @if (dialogOpen() && selectedAppointment(); as appointment) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <section class="w-full max-w-2xl rounded-lg bg-white shadow-xl">
+        <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">Appointment Details</h2>
+            <p class="mt-1 text-sm text-gray-500">{{ appointment.patientName }} - {{ appointment.reason }}</p>
+          </div>
+          <button (click)="closeDialog()" class="rounded-md p-2 text-gray-500 hover:bg-gray-100">Close</button>
+        </div>
+
+        @if (!editingAppointment()) {
+          <div class="grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2">
+            <div><p class="text-xs font-semibold uppercase text-gray-500">SVNR</p><p class="mt-1 text-sm text-gray-900">{{ appointment.svnr }}</p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Patient</p><p class="mt-1 text-sm text-gray-900">{{ appointment.patientName }}</p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Phone</p><p class="mt-1 text-sm text-gray-900">{{ appointment.phone }}</p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Reason</p><p class="mt-1 text-sm text-gray-900">{{ appointment.reason }}</p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Time</p><p class="mt-1 text-sm text-gray-900">{{ formatAppointmentTime(appointment) }} - {{ appointment.durationMinutes }} min</p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Room</p><p class="mt-1 text-sm text-gray-900">{{ roomName(appointment.roomId) }}</p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Doctor</p><p class="mt-1 text-sm text-gray-900">{{ doctorName(appointment.doctorId) }}</p></div>
+          </div>
+          <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+            <button (click)="editingAppointment.set(true)" [disabled]="saving()" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400">Edit</button>
+            <button (click)="removeAppointment(appointment.id)" [disabled]="saving()" class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300">
+              {{ saving() ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
+        } @else {
+          <div class="space-y-4 px-6 py-5">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label><span class="text-sm font-medium text-gray-700">SVNR</span><input [ngModel]="editForm().svnr" (ngModelChange)="updateEditForm('svnr', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></label>
+              <label><span class="text-sm font-medium text-gray-700">Patient</span><input [ngModel]="editForm().patientName" (ngModelChange)="updateEditForm('patientName', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></label>
+              <label><span class="text-sm font-medium text-gray-700">Phone</span><input [ngModel]="editForm().phone" (ngModelChange)="updateEditForm('phone', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></label>
+              <label><span class="text-sm font-medium text-gray-700">Duration</span><div class="mt-1 flex rounded-md border border-gray-300"><input type="number" [ngModel]="editForm().durationMinutes" (ngModelChange)="updateEditForm('durationMinutes', $event === '' ? null : +$event)" class="w-full border-0 px-3 py-2 text-sm" /><span class="bg-gray-50 px-3 py-2 text-sm text-gray-500">min</span></div></label>
+              <label><span class="text-sm font-medium text-gray-700">Reason</span><select [ngModel]="editForm().reason" (ngModelChange)="updateEditForm('reason', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">@for (reason of reasons(); track reason) {<option [value]="reason">{{ reason }}</option>}</select></label>
+              <label><span class="text-sm font-medium text-gray-700">Room</span><select [ngModel]="editForm().roomId" (ngModelChange)="updateEditForm('roomId', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">@for (room of resources().rooms; track room.id) {<option [value]="room.id">{{ room.name }}</option>}</select></label>
+              <label><span class="text-sm font-medium text-gray-700">Doctor</span><select [ngModel]="editForm().doctorId" (ngModelChange)="updateEditForm('doctorId', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">@for (doctor of resources().doctors; track doctor.id) {<option [value]="doctor.id">{{ doctor.name }}</option>}</select></label>
+              <div class="grid grid-cols-2 gap-3">
+                <label><span class="text-sm font-medium text-gray-700">Date</span><input type="date" [ngModel]="editForm().date" (ngModelChange)="updateEditForm('date', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></label>
+                <label><span class="text-sm font-medium text-gray-700">Time</span><input type="time" [ngModel]="editForm().time" (ngModelChange)="updateEditForm('time', $event)" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></label>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+            <button (click)="editingAppointment.set(false)" [disabled]="saving()" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400">Cancel</button>
+            <button (click)="saveEditedAppointment()" [disabled]="saving()" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+              {{ saving() ? 'Saving...' : 'Save changes' }}
+            </button>
+          </div>
+        }
+      </section>
+    </div>
+  }
+</div>

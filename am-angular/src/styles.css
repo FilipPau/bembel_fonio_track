@@ -1,0 +1,481 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --radius: 0.65rem;
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.145 0 0);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.145 0 0);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.145 0 0);
+  --color-primary: oklch(0.205 0 0);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-secondary: oklch(0.97 0 0);
+  --color-secondary-foreground: oklch(0.205 0 0);
+  --color-muted: oklch(0.97 0 0);
+  --color-muted-foreground: oklch(0.556 0 0);
+  --color-accent: oklch(0.97 0 0);
+  --color-accent-foreground: oklch(0.205 0 0);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-border: oklch(0.922 0 0);
+  --color-input: oklch(0.922 0 0);
+  --color-ring: oklch(0.708 0 0);
+  --color-chart-1: oklch(0.646 0.222 41.116);
+  --color-chart-2: oklch(0.6 0.118 184.704);
+  --color-chart-3: oklch(0.398 0.07 227.392);
+  --color-chart-4: oklch(0.828 0.189 84.429);
+  --color-chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --color-sidebar: oklch(0.985 0 0);
+  --color-sidebar-foreground: oklch(0.145 0 0);
+  --color-sidebar-primary: oklch(0.205 0 0);
+  --color-sidebar-primary-foreground: oklch(0.985 0 0);
+  --color-sidebar-accent: oklch(0.97 0 0);
+  --color-sidebar-accent-foreground: oklch(0.205 0 0);
+  --color-sidebar-border: oklch(0.922 0 0);
+  --color-sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --color-background: oklch(0.145 0 0);
+  --color-foreground: oklch(0.985 0 0);
+  --color-card: oklch(0.205 0 0);
+  --color-card-foreground: oklch(0.985 0 0);
+  --color-popover: oklch(0.205 0 0);
+  --color-popover-foreground: oklch(0.985 0 0);
+  --color-primary: oklch(0.922 0 0);
+  --color-primary-foreground: oklch(0.205 0 0);
+  --color-secondary: oklch(0.269 0 0);
+  --color-secondary-foreground: oklch(0.985 0 0);
+  --color-muted: oklch(0.269 0 0);
+  --color-muted-foreground: oklch(0.708 0 0);
+  --color-accent: oklch(0.269 0 0);
+  --color-accent-foreground: oklch(0.985 0 0);
+  --color-destructive: oklch(0.704 0.191 22.216);
+  --color-border: oklch(1 0 0 / 10%);
+  --color-input: oklch(1 0 0 / 15%);
+  --color-ring: oklch(0.556 0 0);
+  --color-chart-1: oklch(0.488 0.243 264.376);
+  --color-chart-2: oklch(0.696 0.17 162.48);
+  --color-chart-3: oklch(0.769 0.188 70.08);
+  --color-chart-4: oklch(0.627 0.265 303.9);
+  --color-chart-5: oklch(0.645 0.246 16.439);
+  --color-sidebar: oklch(0.205 0 0);
+  --color-sidebar-foreground: oklch(0.985 0 0);
+  --color-sidebar-primary: oklch(0.488 0.243 264.376);
+  --color-sidebar-primary-foreground: oklch(0.985 0 0);
+  --color-sidebar-accent: oklch(0.269 0 0);
+  --color-sidebar-accent-foreground: oklch(0.985 0 0);
+  --color-sidebar-border: oklch(1 0 0 / 10%);
+  --color-sidebar-ring: oklch(0.556 0 0);
+}
+
+html, body {
+    font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+}
+
+body {
+    background: oklch(var(--color-background));
+    color: oklch(var(--color-foreground));
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: rgb(148 163 184);
+    opacity: 1;
+}
+
+@keyframes app-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes app-scale-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes app-soft-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes skeleton-shimmer {
+    from {
+        background-position: 180% 0;
+    }
+
+    to {
+        background-position: -180% 0;
+    }
+}
+
+.skeleton {
+    display: block;
+    border-radius: 8px;
+    background:
+        linear-gradient(
+            90deg,
+            rgb(226 232 240) 0%,
+            rgb(241 245 249) 45%,
+            rgb(226 232 240) 90%
+        );
+    background-size: 220% 100%;
+    animation: skeleton-shimmer 1.25s ease-in-out infinite;
+}
+
+.skeleton-line {
+    height: 12px;
+}
+
+.skeleton-title {
+    height: 18px;
+}
+
+.skeleton-pill {
+    height: 32px;
+    border-radius: 999px;
+}
+
+.skeleton-card {
+    border: 1px solid rgb(229 231 235);
+    border-radius: 8px;
+    background: white;
+    padding: 20px;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.skeleton-calendar {
+    min-height: 420px;
+    border: 1px solid rgb(229 231 235);
+    border-radius: 8px;
+    background:
+        linear-gradient(rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.85)),
+        repeating-linear-gradient(
+            0deg,
+            transparent 0,
+            transparent 43px,
+            rgb(226 232 240) 44px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 13.9%,
+            rgb(226 232 240) 14%
+        );
+}
+
+.empty-state {
+    display: flex;
+    min-height: 128px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px dashed rgb(203 213 225);
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at top, rgb(239 246 255 / 0.7), transparent 58%),
+        rgb(248 250 252);
+    padding: 24px;
+    text-align: center;
+    color: rgb(71 85 105);
+}
+
+.empty-state.compact {
+    min-height: 82px;
+    padding: 14px;
+}
+
+.empty-face {
+    position: relative;
+    display: block;
+    height: 28px;
+    width: 46px;
+}
+
+.empty-face::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 7px;
+    height: 4px;
+    width: 4px;
+    border-radius: 999px;
+    background: rgb(37 99 235);
+    box-shadow: 26px 0 0 rgb(37 99 235);
+}
+
+.empty-face::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    top: 16px;
+    height: 5px;
+    width: 10px;
+    border-top: 2px solid rgb(37 99 235);
+    border-radius: 999px 999px 0 0;
+}
+
+.expand-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+        grid-template-rows 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        opacity 180ms ease,
+        transform 220ms ease;
+}
+
+.expand-panel.expand-panel-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.expand-panel-inner {
+    overflow: hidden;
+}
+
+.hero-banner-image {
+    transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-origin: center;
+}
+
+.hero-banner:hover .hero-banner-image {
+    transform: scale(1.035);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .app-main > *:not(router-outlet) {
+        animation: app-fade-up 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    main section.rounded-lg,
+    main article.rounded-lg,
+    main div.rounded-lg.border {
+        animation: app-scale-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        transition:
+            border-color 180ms ease,
+            box-shadow 180ms ease,
+            transform 180ms ease,
+            background-color 180ms ease;
+    }
+
+    main section.rounded-lg:hover,
+    main article.rounded-lg:hover,
+    main div.rounded-lg.border:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgb(15 23 42 / 0.07);
+    }
+
+    main button,
+    main a,
+    header button,
+    header a,
+    aside button,
+    aside a {
+        transition:
+            background-color 160ms ease,
+            border-color 160ms ease,
+            box-shadow 160ms ease,
+            color 160ms ease,
+            opacity 160ms ease,
+            transform 160ms ease;
+    }
+
+    main button:hover,
+    header button:hover,
+    aside button:hover {
+        transform: translateY(-1px);
+    }
+
+    main button:active,
+    header button:active,
+    aside button:active,
+    .admin-nav-link:active {
+        transform: translateY(0) scale(0.985);
+    }
+
+    input,
+    select,
+    textarea {
+        transition:
+            border-color 160ms ease,
+            box-shadow 160ms ease,
+            background-color 160ms ease;
+    }
+
+    .fixed.inset-0.bg-black\/40 {
+        animation: app-soft-pop 180ms ease both;
+    }
+
+    .fixed.inset-0.bg-black\/40 > section {
+        animation: app-scale-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .user-menu-dropdown {
+        animation: app-scale-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        transform-origin: top right;
+    }
+
+    .empty-state {
+        animation: app-scale-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .empty-face {
+        animation: app-soft-pop 280ms ease both;
+    }
+}
+
+.brand-mark {
+    box-shadow: 0 8px 18px rgb(37 99 235 / 0.2);
+    transition:
+        box-shadow 180ms ease,
+        transform 180ms ease;
+}
+
+.brand-mark:hover {
+    box-shadow: 0 12px 24px rgb(37 99 235 / 0.28);
+    transform: translateY(-1px) rotate(-2deg);
+}
+
+.admin-nav-link {
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-nav-link::before {
+    content: "";
+    position: absolute;
+    inset: 7px auto 7px 6px;
+    width: 3px;
+    border-radius: 999px;
+    background: rgb(37 99 235 / 0.72);
+    opacity: 0;
+    transform: scaleY(0.45);
+    transition:
+        opacity 160ms ease,
+        transform 160ms ease;
+}
+
+.admin-nav-link:hover {
+    transform: translateX(2px);
+}
+
+.admin-nav-link:hover::before,
+.admin-nav-link.bg-sidebar-accent::before {
+    opacity: 1;
+    transform: scaleY(1);
+}
+
+.admin-nav-link:focus-visible {
+    outline: 2px solid rgb(37 99 235 / 0.45);
+    outline-offset: 2px;
+}
+
+.cal-week-view .cal-event,
+.cal-week-view .cal-event-container {
+    overflow: visible;
+}
+
+.cal-week-view .cal-hour-segment.staffed-segment {
+    background:
+        linear-gradient(90deg, rgb(234 179 8 / 0.28), rgb(254 249 195 / 0.86)),
+        repeating-linear-gradient(
+            -45deg,
+            rgb(234 179 8 / 0.13) 0,
+            rgb(234 179 8 / 0.13) 6px,
+            transparent 6px,
+            transparent 14px
+        );
+    box-shadow: inset 3px 0 0 rgb(202 138 4 / 0.7);
+}
+
+.cal-week-view .cal-hour-segment.staffed-segment.cal-hour-start {
+    box-shadow:
+        inset 3px 0 0 rgb(202 138 4 / 0.7),
+        inset 0 1px 0 rgb(234 179 8 / 0.35);
+}
+
+.cal-week-view .cal-hour-segment.staffed-segment.staffed-segment-start {
+    border-top: 2px solid rgb(202 138 4 / 0.9);
+}
+
+.cal-week-view .cal-hour-segment.staffed-segment.staffed-segment-end {
+    border-bottom: 2px solid rgb(202 138 4 / 0.9);
+}
+
+.cal-week-view .staff-shift-label {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: 3px;
+    z-index: 2;
+    pointer-events: none;
+    display: block;
+    overflow: hidden;
+    border: 1px solid rgb(202 138 4 / 0.22);
+    border-radius: 5px;
+    background: rgb(255 251 235 / 0.74);
+    padding: 1px 5px;
+    color: rgb(113 63 18);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cal-week-view .cal-time-events .cal-event-container.appointment-event {
+    z-index: 8;
+    transition: z-index 120ms ease;
+}
+
+.cal-week-view .cal-time-events .cal-event-container.appointment-event:hover {
+    z-index: 80;
+}
+
+.cal-week-view .cal-time-events .cal-event {
+    border-left: 3px solid rgb(37 99 235 / 0.95);
+    background-color: rgb(219 234 254 / 0.8) !important;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.15);
+    transition:
+        background-color 120ms ease,
+        box-shadow 120ms ease,
+        transform 120ms ease;
+}
+
+.cal-week-view .cal-time-events .cal-event-container.appointment-event:hover .cal-event {
+    background-color: rgb(219 234 254 / 0.98) !important;
+    box-shadow: 0 8px 18px rgb(15 23 42 / 0.18);
+    transform: translateY(-1px);
+}
+
+.cal-week-view .cal-time-events .cal-event-container.compact-appointment-event .cal-event {
+    line-height: 18px;
+}
