@@ -1,4 +1,4 @@
-# Project Name
+# Appointment Manager
 
 An appointment management system. 
 
