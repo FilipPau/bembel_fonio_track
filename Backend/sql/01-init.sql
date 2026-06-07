@@ -64,19 +64,17 @@ CREATE TABLE IF NOT EXISTS appointments (
     treatment_id INTEGER NOT NULL REFERENCES treatments (id) ON DELETE RESTRICT,
     start_time   TIMESTAMPTZ NOT NULL,
     end_time     TIMESTAMPTZ NOT NULL,
-    status       VARCHAR(20) NOT NULL DEFAULT 'scheduled',
     CONSTRAINT appointment_ends_after_start CHECK (end_time > start_time),
-    CONSTRAINT valid_appointment_status CHECK (status IN ('scheduled', 'canceled', 'completed')),
     CONSTRAINT appointment_staff_treatment_is_qualified FOREIGN KEY (staff_id, treatment_id)
         REFERENCES staff_specializations (staff_id, treatment_id) ON DELETE RESTRICT,
     CONSTRAINT no_overlapping_staff_appointments EXCLUDE USING gist (
         staff_id WITH =,
         tstzrange(start_time, end_time, '[)') WITH &&
-    ) WHERE (status = 'scheduled'),
+    ),
     CONSTRAINT no_overlapping_room_appointments EXCLUDE USING gist (
         room_id WITH =,
         tstzrange(start_time, end_time, '[)') WITH &&
-    ) WHERE (status = 'scheduled')
+    )
 );
 
 CREATE INDEX IF NOT EXISTS idx_appointments_customer_id
@@ -112,3 +110,41 @@ CREATE INDEX IF NOT EXISTS idx_planned_appointments_treatment_id
 
 CREATE INDEX IF NOT EXISTS idx_planned_appointments_appointment_date
     ON planned_appointments (appointment_date);
+
+CREATE TABLE IF NOT EXISTS appointment_refills (
+    uid                BIGSERIAL PRIMARY KEY,
+    old_appointment_id BIGINT NOT NULL REFERENCES appointments (id) ON DELETE CASCADE,
+    new_appointment_id BIGINT REFERENCES appointments (id) ON DELETE SET NULL,
+
+    CONSTRAINT refill_cannot_use_same_appointment CHECK (
+        new_appointment_id IS NULL OR new_appointment_id <> old_appointment_id
+    ),
+    CONSTRAINT one_refill_per_new_appointment UNIQUE (new_appointment_id)
+);
+
+CREATE TABLE IF NOT EXISTS refill_attempts (
+    uid                   BIGSERIAL PRIMARY KEY,
+    refill_uid            BIGINT NOT NULL REFERENCES appointment_refills (uid) ON DELETE CASCADE,
+    customer_id           VARCHAR(20) NOT NULL REFERENCES customers (social_security_number) ON DELETE CASCADE,
+    outcome               VARCHAR(20) NOT NULL DEFAULT 'calling',
+    outcome_reason        VARCHAR(160),
+    call_timestamp        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    call_duration_seconds INTEGER CHECK (call_duration_seconds IS NULL OR call_duration_seconds >= 0),
+
+    CONSTRAINT valid_refill_attempt_outcome CHECK (
+        outcome IN ('calling', 'accepted', 'declined', 'no_answer')
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_appointment_refills_old_appointment
+    ON appointment_refills (old_appointment_id);
+
+CREATE INDEX IF NOT EXISTS idx_appointment_refills_new_appointment
+    ON appointment_refills (new_appointment_id)
+    WHERE new_appointment_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_refill_attempts_refill_timestamp
+    ON refill_attempts (refill_uid, call_timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_refill_attempts_customer
+    ON refill_attempts (customer_id);
