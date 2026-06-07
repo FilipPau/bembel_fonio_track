@@ -26,7 +26,7 @@ The case we were given was about the topic of appointment management. Our goal w
 
 ## Demo
 
-- Screenshots / video: `<link>`
+- video: `https://youtu.be/jYXN6t9bOws`
 
 ---
 
