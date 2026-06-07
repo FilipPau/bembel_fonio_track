@@ -34,9 +34,8 @@ The case we were given was about the topic of appointment management. Our goal w
 ## Project structure
 
 ```
-Backend
+Backend -> Contains Backend and Database
 Frontend
-Database
 ```
 
 
