@@ -541,19 +541,57 @@ def reserve_appointment_for_treatment(
     treatment_id: int,
     customer_id: str,
     search_from: Optional[datetime] = None,
+    staff_id: Optional[int] = None,
 ) -> Mapping[str, Any]:
-    treatment = get_treatment(treatment_id)
-    if not treatment:
-        return {"success": False, "appointment": None}
-
     customer = get_customer(customer_id)
     if not customer:
         return {"success": False, "appointment": None}
+
+    result = find_available_treatment_slots(
+        treatment_id=treatment_id,
+        staff_id=staff_id,
+        search_from=search_from,
+    )
+
+    if not result["success"]:
+        return {"success": False, "appointment": None}
+
+    for slot in result["slots"]:
+        try:
+            appointment = create_appointment(
+                {
+                    "customer_id": customer_id,
+                    "staff_id": slot["staff_id"],
+                    "room_id": slot["room_id"],
+                    "treatment_id": treatment_id,
+                    "start_time": slot["start_time"],
+                    "end_time": slot["end_time"],
+                    "status": "scheduled",
+                }
+            )
+        except Exception:
+            continue
+
+        if appointment:
+            return {"success": True, "appointment": appointment}
+
+    return {"success": False, "appointment": None}
+
+
+def find_available_treatment_slots(
+    treatment_id: int,
+    search_from: Optional[datetime] = None,
+) -> Mapping[str, Any]:
+    treatment = get_treatment(treatment_id)
+    if not treatment:
+        return {"success": False, "slots": []}
 
     duration = timedelta(minutes=int(treatment["min_duration_minutes"]))
 
     if search_from is None:
         search_from = datetime.now(timezone.utc)
+
+    slots = []
 
     qualified_staff = db_fetch_all(
         """
@@ -580,41 +618,56 @@ def reserve_appointment_for_treatment(
         )
 
         for shift in shifts:
-            candidate_start = max(shift["shift_start"], search_from)
-            candidate_end = candidate_start + duration
+            shift_start = max(shift["shift_start"], search_from)
+            shift_end = shift["shift_end"]
 
-            if candidate_end > shift["shift_end"]:
-                continue
-
-            conflict = db_fetch_one(
+            appointments = db_fetch_all(
                 """
-                SELECT id
+                SELECT id, staff_id, room_id, start_time, end_time
                 FROM appointments
-                WHERE staff_id = %s
-                  AND status = 'scheduled'
+                WHERE status = 'scheduled'
                   AND start_time < %s
                   AND end_time > %s
-                LIMIT 1
+                  AND (staff_id = %s OR room_id = %s)
+                ORDER BY start_time
                 """,
-                (staff_id, candidate_end, candidate_start),
+                (shift_end, shift_start, staff_id, shift["room_id"]),
             )
 
-            if conflict:
-                continue
+            free_start = shift_start
 
-            appointment = create_appointment(
-                {
-                    "customer_id": customer_id,
-                    "staff_id": staff_id,
-                    "room_id": shift["room_id"],
-                    "treatment_id": treatment_id,
-                    "start_time": candidate_start,
-                    "end_time": candidate_end,
-                    "status": "scheduled",
-                }
-            )
+            for appointment in appointments:
+                busy_start = appointment["start_time"]
+                busy_end = appointment["end_time"]
 
-            if appointment:
-                return {"success": True, "appointment": appointment}
+                if busy_start > free_start:
+                    candidate_start = free_start
+                    while candidate_start + duration <= busy_start:
+                        slots.append(
+                            {
+                                "staff_id": staff_id,
+                                "room_id": shift["room_id"],
+                                "treatment_id": treatment_id,
+                                "start_time": candidate_start,
+                                "end_time": candidate_start + duration,
+                            }
+                        )
+                        candidate_start = candidate_start + duration
 
-    return {"success": False, "appointment": None}
+                if busy_end > free_start:
+                    free_start = busy_end
+
+            candidate_start = free_start
+            while candidate_start + duration <= shift_end:
+                slots.append(
+                    {
+                        "staff_id": staff_id,
+                        "room_id": shift["room_id"],
+                        "treatment_id": treatment_id,
+                        "start_time": candidate_start,
+                        "end_time": candidate_start + duration,
+                    }
+                )
+                candidate_start = candidate_start + duration
+
+    return {"success": True, "slots": slots}

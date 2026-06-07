@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Optional
 
 from flask import Flask, jsonify, request
 
@@ -131,6 +131,7 @@ def auto_reserve_appointment():
 
     treatment_id = payload.get("treatment_id")
     customer_id = payload.get("customer_id")
+    staff_id_raw = payload.get("staff_id")
     search_from_raw = payload.get("search_from")
 
     if treatment_id is None:
@@ -138,6 +139,13 @@ def auto_reserve_appointment():
 
     if customer_id is None:
         return jsonify({"error": "Missing field", "field": "customer_id"}), 400
+
+    staff_id = None
+    if staff_id_raw:
+        try:
+            staff_id = int(staff_id_raw)
+        except ValueError:
+            return jsonify({"error": "Invalid field", "field": "staff_id"}), 400
 
     search_from = None
     if search_from_raw:
@@ -151,11 +159,40 @@ def auto_reserve_appointment():
             treatment_id=int(treatment_id),
             customer_id=str(customer_id),
             search_from=search_from,
+            staff_id=staff_id,
         )
     except Exception as exc:
         return _database_error_response(exc)
 
     return jsonify(result), 200
+
+
+@app.post("/api/shane/available-treatment-slots")
+def shane_available_treatment_slots():
+    payload = _json_payload()
+
+    treatment_id = payload.get("treatment_id")
+    search_from_raw = payload.get("search_from")
+
+    if treatment_id is None:
+        return jsonify({"error": "Missing field", "field": "treatment_id"}), 400
+
+    search_from = None
+    if search_from_raw:
+        try:
+            search_from = datetime.fromisoformat(search_from_raw.replace("Z", "+00:00"))
+        except ValueError:
+            return jsonify({"error": "Invalid field", "field": "search_from"}), 400
+
+    try:
+        result = db.find_available_treatment_slots(
+            treatment_id=int(treatment_id),
+            search_from=search_from,
+        )
+    except Exception as exc:
+        return _database_error_response(exc)
+
+    return jsonify(result["slots"]), 200
 
 
 @app.post("/api/treatments")

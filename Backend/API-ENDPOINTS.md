@@ -42,6 +42,7 @@ http://localhost:5000
 | Method | Endpoint | Beschreibung |
 |---|---|---|
 | POST | `/api/shane/customers-by-number` | Sucht Kunden anhand von `fromNumber` aus dem JSON-Body und gibt immer ein Array zurueck. `toNumber` wird ignoriert. |
+| POST | `/api/shane/available-treatment-slots` | Sucht alle freien Behandlungsslots ab `search_from` fuer `customer_id` und `treatment_id` und gibt sie als Array zurueck. Es wird kein Termin erstellt. |
 
 Request Body:
 
@@ -82,6 +83,33 @@ Wenn kein Kunde gefunden wird:
 
 ```json
 []
+```
+
+Available Treatment Slots Request Body:
+
+```json
+{
+  "treatment_id": 1,
+  "customer_id": "1001010101",
+  "search_from": "2026-06-08T09:00:00+02:00",
+  "staff_id": 1
+}
+```
+
+`staff_id` ist optional. Wenn gesetzt, werden Slots dieses Mitarbeiters bevorzugt einsortiert.
+
+Available Treatment Slots Response:
+
+```json
+[
+  {
+    "staff_id": 1,
+    "room_id": 1,
+    "treatment_id": 1,
+    "start_time": "2026-06-08T09:00:00+02:00",
+    "end_time": "2026-06-08T09:30:00+02:00"
+  }
+]
 ```
 
 ## Treatments
@@ -185,6 +213,7 @@ Wochentage:
 | Method | Endpoint | Beschreibung |
 |---|---|---|
 | POST | `/api/appointments` | Erstellt einen konkreten Termin mit Kunde, Mitarbeiter, Raum, Behandlung, Startzeit, Endzeit und Status. |
+| POST | `/api/appointments/reserve` | Sucht ab `search_from` den naechsten passenden Termin fuer Kunde und Behandlung und reserviert ihn. |
 | GET | `/api/appointments` | Gibt alle konkreten Termine zurueck. |
 | GET | `/api/appointments/<appointment_id>` | Gibt einen konkreten Termin anhand der ID zurueck. |
 | PUT | `/api/appointments/<appointment_id>` | Aktualisiert einen konkreten Termin vollstaendig oder teilweise. |
@@ -197,6 +226,34 @@ Statuswerte:
 scheduled
 canceled
 completed
+```
+
+Reserve Request Body:
+
+```json
+{
+  "treatment_id": 1,
+  "customer_id": "1001010101",
+  "search_from": "2026-06-08T09:00:00+02:00",
+  "staff_id": 1
+}
+```
+
+`staff_id` ist optional. Wenn gesetzt, wird dieser Mitarbeiter bevorzugt, sofern er fuer die Behandlung qualifiziert ist.
+
+Reserve Response:
+
+```json
+{
+  "id": 9,
+  "customer_id": "1001010101",
+  "staff_id": 1,
+  "room_id": 1,
+  "treatment_id": 1,
+  "start_time": "2026-06-08T09:00:00+02:00",
+  "end_time": "2026-06-08T09:30:00+02:00",
+  "status": "scheduled"
+}
 ```
 
 ## Planned Appointments
